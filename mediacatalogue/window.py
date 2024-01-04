@@ -65,7 +65,7 @@ class CollectionsWidget(QtWidgets.QWidget):
         self.view = CollectionsView(self)
         self.model = CollectionsModel(self)
         self.view.setModel(self.model)
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout = QtWidgets.QVBoxLayout()
         self.main_layout.addWidget(self.view)
         self.setLayout(self.main_layout)
         self.setSizePolicy(

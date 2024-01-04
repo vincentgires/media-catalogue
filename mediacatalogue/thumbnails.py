@@ -281,7 +281,7 @@ class ViewControlsWidget(QtWidgets.QWidget):
 class SearchInViewControls(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(SearchInViewControls, self).__init__(parent)
-        self.main_layout = QtWidgets.QHBoxLayout(self)
+        self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setSizeConstraint(
             QtWidgets.QLayout.SizeConstraint.SetFixedSize)
         label = QtWidgets.QLabel('filter')
@@ -319,9 +319,9 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
         self.view.view_item.connect(self.on_thumbnail_double_clicked)
 
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout = QtWidgets.QVBoxLayout()
         self.main_layout.addWidget(self.view)
-        controls_layout = QtWidgets.QHBoxLayout(self)
+        controls_layout = QtWidgets.QHBoxLayout()
         controls_layout.addWidget(self.view_controls)
         controls_layout.addWidget(self.search_controls)
         self.main_layout.addLayout(controls_layout)
@@ -376,6 +376,6 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     widget = ThumbnailsWidget()
     for image in glob.glob(os.path.expanduser('~/imagestest/*.jpg')):
-        widget.add_item_from_file(image)
+        widget.add_collection_item(image)
     widget.show()
     app.exec_()

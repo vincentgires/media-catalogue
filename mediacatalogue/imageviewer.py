@@ -62,7 +62,8 @@ class HistoryWidget(QtWidgets.QWidget):
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         self.setFixedWidth(170)
-        self.main_layout = QtWidgets.QVBoxLayout(self)
+        self.main_layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.main_layout)
 
         self.history_listwidget = QtWidgets.QListWidget(self)
         self.history_listwidget.currentItemChanged.connect(self.on_item_change)
