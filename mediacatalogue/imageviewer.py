@@ -108,7 +108,6 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.resize(QtCore.QSize(*default_image_viewer_size))
         self.setWindowFlags(QtCore.Qt.Window)
         self.main_layout = QtWidgets.QVBoxLayout()
-        self.viewer_main_splitter = QtWidgets.QSplitter(self)
         self.image_pixmap = QtGui.QPixmap()
         self.image_view = ImageView(self)
         self.history_widget = HistoryWidget(self.image_view)
@@ -129,10 +128,11 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.file_entry = QtWidgets.QLineEdit()
         self.file_entry.returnPressed.connect(self.on_update_file_path)
 
-        self.viewer_main_splitter.addWidget(self.history_widget)
-        self.viewer_main_splitter.addWidget(self.image_view)
+        viewer_main_splitter = QtWidgets.QSplitter()
+        viewer_main_splitter.addWidget(self.history_widget)
+        viewer_main_splitter.addWidget(self.image_view)
 
-        self.main_layout.addWidget(self.viewer_main_splitter)
+        self.main_layout.addWidget(viewer_main_splitter)
         self.main_layout.addWidget(self.file_entry)
         self.setLayout(self.main_layout)
 

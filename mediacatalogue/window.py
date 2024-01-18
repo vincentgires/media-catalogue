@@ -116,15 +116,21 @@ class ContextWidget(QtWidgets.QWidget):
             partial(
                 self.show_next_item_from_view, False, thumbnail_item_model))
 
-    def on_history_show(self, image_viewer_widget):
+    def _fill_history(self, image_viewer_widget):
         category_item = get_category_item(self.context_name)
         if category_item is None:
             return
         if category_item.find_history is None:
             return
+        history_widget = image_viewer_widget.history_widget
         history_files = category_item.find_history(
-            image_viewer_widget.history_widget.initial_filepath)
-        image_viewer_widget.history_widget.fill(history_files)
+            history_widget.initial_filepath)
+        history_widget.fill(history_files)
+        if history_files:
+            history_widget.history_listwidget.setCurrentRow(0)
+
+    def on_history_show(self, image_viewer_widget):
+        self._fill_history(image_viewer_widget)
 
     def show_next_item_from_view(
             self, backward=False,
@@ -133,25 +139,22 @@ class ContextWidget(QtWidgets.QWidget):
         if thumbnail_item_model is None:
             return
 
-        if image_viewer_widget.is_history_mode:
-            file = image_viewer_widget.history_widget.initial_filepath
-        else:
-            file = image_viewer_widget.image_loader.file_object.filePath()
-
+        file = image_viewer_widget.history_widget.initial_filepath
         current_item = thumbnail_item_model.findItems(
             file, QtCore.Qt.MatchExactly)[0]
         current_index = thumbnail_item_model.indexFromItem(
             current_item)
 
         increment = -1 if backward else 1
-        next_index = current_index.sibling(
-            current_index.row() + increment, 0)
-        next_item = thumbnail_item_model.itemFromIndex(
-            next_index)
+        next_index = current_index.sibling(current_index.row() + increment, 0)
+        next_item = thumbnail_item_model.itemFromIndex(next_index)
         if next_item:
             filepath = next_item.data(QtCore.Qt.DisplayRole)
             image_viewer_widget.set_image_file_path(filepath)
             image_viewer_widget.load_image()
+
+        if image_viewer_widget.is_history_mode:
+            self._fill_history(image_viewer_widget)
 
 
 class ContextDockWidget(QtWidgets.QDockWidget):
