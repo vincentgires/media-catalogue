@@ -41,6 +41,8 @@ class ImageView(QtWidgets.QGraphicsView):
         ignore_keys = (
             QtCore.Qt.Key_Right,
             QtCore.Qt.Key_Left,
+            QtCore.Qt.Key_Home,
+            QtCore.Qt.Key_End,
             QtCore.Qt.Key_PageUp,
             QtCore.Qt.Key_PageDown,
             QtCore.Qt.Key_F,
@@ -100,6 +102,8 @@ class ImageViewerWidget(QtWidgets.QWidget):
     history_show = QtCore.Signal(object)
     next_image = QtCore.Signal(object)
     previous_image = QtCore.Signal(object)
+    first_image = QtCore.Signal(object)
+    last_image = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -169,6 +173,12 @@ class ImageViewerWidget(QtWidgets.QWidget):
 
             case QtCore.Qt.Key_Left:
                 self.previous_image.emit(self)
+
+            case QtCore.Qt.Key_Home:
+                self.first_image.emit(self)
+
+            case QtCore.Qt.Key_End:
+                self.last_image.emit(self)
 
             # History widget
             case QtCore.Qt.Key_H:

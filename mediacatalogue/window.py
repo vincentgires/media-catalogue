@@ -110,11 +110,24 @@ class ContextWidget(QtWidgets.QWidget):
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
         image_viewer_widget.history_show.connect(self.on_history_show)
         image_viewer_widget.previous_image.connect(
-            partial(
-                self.show_next_item_from_view, True, thumbnail_item_model))
+            lambda x: self.show_next_item_from_view(
+                backward=True,
+                thumbnail_item_model=thumbnail_item_model,
+                image_viewer_widget=x))
         image_viewer_widget.next_image.connect(
-            partial(
-                self.show_next_item_from_view, False, thumbnail_item_model))
+            lambda x: self.show_next_item_from_view(
+                thumbnail_item_model=thumbnail_item_model,
+                image_viewer_widget=x))
+        image_viewer_widget.first_image.connect(
+            lambda x: self.show_next_item_from_view(
+                first=True,
+                thumbnail_item_model=thumbnail_item_model,
+                image_viewer_widget=x))
+        image_viewer_widget.last_image.connect(
+            lambda x: self.show_next_item_from_view(
+                last=True,
+                thumbnail_item_model=thumbnail_item_model,
+                image_viewer_widget=x))
 
     def _fill_history(self, image_viewer_widget):
         category_item = get_category_item(self.context_name)
@@ -133,9 +146,10 @@ class ContextWidget(QtWidgets.QWidget):
         self._fill_history(image_viewer_widget)
 
     def show_next_item_from_view(
-            self, backward=False,
+            self, backward=False, first=False, last=False,
             thumbnail_item_model=None,
             image_viewer_widget=None):
+
         if thumbnail_item_model is None:
             return
 
@@ -157,9 +171,18 @@ class ContextWidget(QtWidgets.QWidget):
         iter_indexes = (
             iter(reversed(view_indexes)) if backward else iter(view_indexes))
         next_match = view_indexes[0] if backward else view_indexes[-1]
-        next_index = (
-            next(iter_indexes, next_match)
-            if current_index in iter_indexes else view_indexes[0])
+
+        if all(not x for x in (first, last)):
+            next_index = (
+                next(iter_indexes, next_match)
+                if current_index in iter_indexes else view_indexes[0])
+        if first:
+            next_index = view_indexes[0]
+        elif last:
+            next_index = view_indexes[-1]
+
+        if next_index == current_index:
+            return
 
         if next_index is not None:
             filepath = next_index.data(QtCore.Qt.DisplayRole)
@@ -372,6 +395,8 @@ class ShortcutsWidget(QtWidgets.QWidget):
         formlayout.addRow('toggle fullscreen', QtWidgets.QLabel('[f11]'))
         formlayout.addRow('next image', QtWidgets.QLabel('[right]'))
         formlayout.addRow('previous image', QtWidgets.QLabel('[left]'))
+        formlayout.addRow('first image', QtWidgets.QLabel('[home]'))
+        formlayout.addRow('last image', QtWidgets.QLabel('[end]'))
         formlayout.addRow('toggle history', QtWidgets.QLabel('[h]'))
         formlayout.addRow('toggle frameless', QtWidgets.QLabel('[f10]'))
         imageviewer_groupbox.setLayout(formlayout)
