@@ -231,6 +231,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Menubar
         self.menu_bar = QtWidgets.QMenuBar()
+        self.menu_bar.setVisible(False)
         self.menu_help = self.menu_bar.addMenu('help')
         self.show_shortcut_action = self.menu_help.addAction('show shortcuts')
         self.show_shortcut_action.triggered.connect(
