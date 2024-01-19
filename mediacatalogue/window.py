@@ -140,16 +140,29 @@ class ContextWidget(QtWidgets.QWidget):
             return
 
         file = image_viewer_widget.history_widget.initial_filepath
+        view_model = self.thumbnail_widget.view.model()
+
+        view_indexes = []
+        for proxy_row in range(view_model.rowCount()):
+            match_index = view_model.mapToSource(
+                view_model.index(proxy_row, 0))
+            view_indexes.append(match_index)
+
+        if not view_indexes:
+            return
+
         current_item = thumbnail_item_model.findItems(
             file, QtCore.Qt.MatchExactly)[0]
-        current_index = thumbnail_item_model.indexFromItem(
-            current_item)
+        current_index = thumbnail_item_model.indexFromItem(current_item)
+        iter_indexes = (
+            iter(reversed(view_indexes)) if backward else iter(view_indexes))
+        next_match = view_indexes[0] if backward else view_indexes[-1]
+        next_index = (
+            next(iter_indexes, next_match)
+            if current_index in iter_indexes else view_indexes[0])
 
-        increment = -1 if backward else 1
-        next_index = current_index.sibling(current_index.row() + increment, 0)
-        next_item = thumbnail_item_model.itemFromIndex(next_index)
-        if next_item:
-            filepath = next_item.data(QtCore.Qt.DisplayRole)
+        if next_index is not None:
+            filepath = next_index.data(QtCore.Qt.DisplayRole)
             image_viewer_widget.set_image_file_path(filepath)
             image_viewer_widget.load_image()
 
