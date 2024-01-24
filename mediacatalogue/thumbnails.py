@@ -298,7 +298,7 @@ class ThumbnailsWidget(QtWidgets.QWidget):
     item_added = QtCore.Signal(QtGui.QStandardItem)
     viewer_created = QtCore.Signal(ImageViewerWidget, ThumbnailItemModel)
 
-    def __init__(self, parent=None, category=None):
+    def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.view = ThumbnailView(self)

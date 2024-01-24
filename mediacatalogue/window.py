@@ -5,7 +5,6 @@ from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
 from mediacatalogue.thumbnails import ThumbnailsWidget
 
-
 class CollectionItem():
     def __init__(self, name=None):
         self.name = name or 'none'
@@ -80,7 +79,7 @@ class ContextWidget(QtWidgets.QWidget):
         super().__init__(parent=parent)
         self.context_name = context_name
         self.collections_widget = CollectionsWidget(self)
-        self.thumbnail_widget = ThumbnailsWidget(self, category=context_name)
+        self.thumbnail_widget = ThumbnailsWidget(self)
         main_layout = QtWidgets.QHBoxLayout()
         splitter = QtWidgets.QSplitter()
         splitter.addWidget(self.collections_widget)
