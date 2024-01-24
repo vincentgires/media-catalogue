@@ -22,7 +22,8 @@ class ImageLoader(QtCore.QObject):
 
     def __init__(self, file=None):
         super().__init__()
-        self.file_object = FileObject(file)
+        self.file_object = (
+            file if isinstance(file, FileObject) else FileObject(file))
         self.image_reader = QtGui.QImageReader()
         self.image = QtGui.QImage()
         self.target_size = QtCore.QSize(0, 0)

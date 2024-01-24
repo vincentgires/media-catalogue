@@ -1,7 +1,9 @@
 import os
+import sys
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 from PySide2 import QtWidgets, QtCore, QtGui
-from mediacatalogue.image import ImageLoader
+from mediacatalogue.image import FileObject, ImageLoader
 from mediacatalogue.imageviewer import ImageViewerWidget
 
 default_item_spacing = 5
@@ -370,12 +372,30 @@ def _get_items_from_model(model):
     return items
 
 
-if __name__ == '__main__':
-    import sys
-    import glob
+def run_standalone(files=None):
+    def expand_path(path):
+        return os.path.expandvars(os.path.expanduser(path))
+
+    if files is None:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('files', nargs='+')
+        args, _ = parser.parse_known_args()
+        files = args.files
+
+    if len(files) == 1 and os.path.isdir(files[0]):
+        files_ = [FileObject(os.path.join(files[0], p))
+                  for p in os.listdir(expand_path(files[0]))]
+    else:
+        files_ = [FileObject(expand_path(p)) for p in files]
+    images = [f for f in files_ if f.is_image]
+
     app = QtWidgets.QApplication(sys.argv)
     widget = ThumbnailsWidget()
-    for image in glob.glob(os.path.expanduser('~/imagestest/*.jpg')):
+    for image in images:
         widget.add_collection_item(image)
     widget.show()
     app.exec_()
+
+
+if __name__ == '__main__':
+    run_standalone()
