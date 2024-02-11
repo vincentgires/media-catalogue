@@ -10,13 +10,13 @@ class ImageView(QtWidgets.QGraphicsView):
         super().__init__(parent=parent)
 
         self.fit_in_view = True
-        self.backgroundColor = QtGui.QBrush(QtCore.Qt.BDiagPattern)
+        self.background_brush = QtGui.QBrush(QtCore.Qt.BDiagPattern)
         self.setRenderHints(
             QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
         self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorViewCenter)
-        self.setBackgroundBrush(self.backgroundColor)
+        self.setBackgroundBrush(self.background_brush)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
         self.setCacheMode(QtWidgets.QGraphicsView.CacheNone)
 
