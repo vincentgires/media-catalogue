@@ -343,13 +343,13 @@ class ContextToolbar(QtWidgets.QToolBar):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('context toolbar')
-        self.add_action = QtWidgets.QAction(
+        self.add_action = QtGui.QAction(
             QtGui.QIcon(os.path.expandvars('$ICONS_PATH/add.svg')),
             'add', self)
-        self.remove_action = QtWidgets.QAction(
+        self.remove_action = QtGui.QAction(
             QtGui.QIcon(os.path.expandvars('$ICONS_PATH/remove.svg')),
             'remove', self)
-        self.clear_action = QtWidgets.QAction(
+        self.clear_action = QtGui.QAction(
             QtGui.QIcon(os.path.expandvars('$ICONS_PATH/clear.svg')),
             'clear', self)
         self.addAction(self.add_action)

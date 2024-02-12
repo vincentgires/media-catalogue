@@ -11,3 +11,7 @@ def import_module(name):
 QtWidgets = import_module('QtWidgets')
 QtCore = import_module('QtCore')
 QtGui = import_module('QtGui')
+
+# Compatibility with older version
+if qt_binding == 'PySide2':
+    QtGui.QAction = QtWidgets.QAction
