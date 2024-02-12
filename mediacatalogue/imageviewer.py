@@ -1,5 +1,5 @@
 import os
-from PySide2 import QtWidgets, QtCore, QtGui
+from mediacatalogue.qt import QtWidgets, QtCore, QtGui
 from mediacatalogue.image import ImageLoader
 
 default_image_viewer_size = (800, 500)
@@ -107,7 +107,7 @@ class ImageViewerWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self.image_loader = ImageLoader(None)
+        self.image_loader = ImageLoader()
         self.image_loader.image_loaded.connect(self.set_pixmap)
         self.resize(QtCore.QSize(*default_image_viewer_size))
         self.setWindowFlags(QtCore.Qt.Window)

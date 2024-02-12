@@ -1,6 +1,6 @@
 import os
 from functools import partial
-from PySide2 import QtCore, QtWidgets, QtGui
+from mediacatalogue.qt import QtCore, QtWidgets, QtGui
 from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
 from mediacatalogue.thumbnails import ThumbnailsWidget

@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from PySide2 import QtWidgets, QtCore, QtGui
+from mediacatalogue.qt import QtWidgets, QtCore, QtGui
 from mediacatalogue.image import FileObject, ImageLoader
 from mediacatalogue.imageviewer import ImageViewerWidget
 

@@ -1,11 +1,13 @@
 import os
 import threading
-from PySide2 import QtCore, QtGui
+from mediacatalogue.qt import QtCore, QtGui
 
 
 class FileObject(QtCore.QFileInfo):
-    def __init__(self, file):
-        super().__init__(file)
+    def __init__(self, file=None):
+        super().__init__()
+        if file is not None:
+            self.setFile(file)
 
     @property
     def is_image(self):

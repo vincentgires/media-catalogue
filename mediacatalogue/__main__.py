@@ -1,5 +1,5 @@
 import sys
-from PySide2 import QtWidgets
+from mediacatalogue.qt import QtWidgets
 from mediacatalogue import application_name
 from mediacatalogue.window import MainWindow
 
