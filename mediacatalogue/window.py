@@ -5,6 +5,7 @@ from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
 from mediacatalogue.thumbnails import ThumbnailsWidget
 
+
 class CollectionItem():
     def __init__(self, name=None):
         self.name = name or 'none'
