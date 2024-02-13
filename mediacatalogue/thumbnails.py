@@ -248,7 +248,7 @@ class ThumbnailView(QtWidgets.QListView):
 
     def set_proxy_filter(self, pattern):
         model = self.model()
-        model.setFilterRegExp(pattern)
+        model.setFilterRegularExpression(pattern)
 
 
 class ViewControlsWidget(QtWidgets.QWidget):

@@ -4,6 +4,7 @@ from mediacatalogue.image import ImageLoader
 
 image_viewer_default_size = (800, 500)
 history_widget_width = None
+scale_factor = 1.25
 
 
 class ImageView(QtWidgets.QGraphicsView):
@@ -26,11 +27,9 @@ class ImageView(QtWidgets.QGraphicsView):
 
     def wheelEvent(self, event):  # noqa N802
         self.fit_in_view = False
-        scale_factor = 1.15
-        if event.delta() > 0:
-            self.scale(scale_factor, scale_factor)
-        else:
-            self.scale(1.0 / scale_factor, 1.0 / scale_factor)
+        scale = (
+            scale_factor if event.angleDelta().y() > 0 else 1.0 / scale_factor)
+        self.scale(scale, scale)
 
     def resizeEvent(self, event):  # noqa N802
         if self.fit_in_view:
