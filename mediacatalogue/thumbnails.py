@@ -330,9 +330,6 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
         self.setLayout(self.main_layout)
 
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
-
         self.item_added.connect(
             self.send_item_to_thread_pool, QtCore.Qt.AutoConnection)
 

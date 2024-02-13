@@ -5,6 +5,8 @@ from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
 from mediacatalogue.thumbnails import ThumbnailsWidget
 
+collections_view_minimum_width = 100
+
 
 class CollectionItem():
     def __init__(self, name=None):
@@ -58,6 +60,12 @@ class CollectionsView(QtWidgets.QListView):
         super().__init__(parent=parent)
         self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
+    def sizeHint(self):  # noqa N802
+        return QtCore.QSize(collections_view_minimum_width, 0)
+
+    def minimumSizeHint(self):  # noqa N802
+        return QtCore.QSize(collections_view_minimum_width, 0)
+
 
 class CollectionsWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -68,11 +76,6 @@ class CollectionsWidget(QtWidgets.QWidget):
         self.main_layout = QtWidgets.QVBoxLayout()
         self.main_layout.addWidget(self.view)
         self.setLayout(self.main_layout)
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-
-    def sizeHint(self):  # noqa N802
-        return QtCore.QSize(90, 50)
 
 
 class ContextWidget(QtWidgets.QWidget):

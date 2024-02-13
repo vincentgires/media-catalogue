@@ -2,7 +2,8 @@ import os
 from mediacatalogue.qt import QtWidgets, QtCore, QtGui
 from mediacatalogue.image import ImageLoader
 
-default_image_viewer_size = (800, 500)
+image_viewer_default_size = (800, 500)
+history_widget_width = None
 
 
 class ImageView(QtWidgets.QGraphicsView):
@@ -74,6 +75,10 @@ class HistoryWidget(QtWidgets.QWidget):
         self.main_layout.addWidget(label)
         self.main_layout.addWidget(self.history_listwidget)
 
+        if width := history_widget_width:
+            self.setFixedWidth(width)  # HACK: Use fixed width because sizeHint
+            # doesn't seems to work here.
+
     def on_item_change(self, item):
         if item is None:
             return
@@ -109,7 +114,7 @@ class ImageViewerWidget(QtWidgets.QWidget):
         super().__init__(parent=parent)
         self.image_loader = ImageLoader()
         self.image_loader.image_loaded.connect(self.set_pixmap)
-        self.resize(QtCore.QSize(*default_image_viewer_size))
+        self.resize(QtCore.QSize(*image_viewer_default_size))
         self.setWindowFlags(QtCore.Qt.Window)
         self.main_layout = QtWidgets.QVBoxLayout()
         self.image_pixmap = QtGui.QPixmap()
