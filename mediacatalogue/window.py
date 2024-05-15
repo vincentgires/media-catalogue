@@ -4,6 +4,7 @@ from mediacatalogue.qt import QtCore, QtWidgets, QtGui
 from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
 from mediacatalogue.thumbnails import ThumbnailsWidget
+from mediacatalogue.imageviewer import available_image_viewer_widgets
 
 collections_view_minimum_width = 100
 
@@ -262,6 +263,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):  # noqa N802
         self.save_settings()
+        available_image_viewer_widgets.clear()
         return QtWidgets.QMainWindow.closeEvent(self, event)
 
     def keyReleaseEvent(self, event):  # noqa N802
