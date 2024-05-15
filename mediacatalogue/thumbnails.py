@@ -4,7 +4,8 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from mediacatalogue.qt import QtWidgets, QtCore, QtGui
 from mediacatalogue.image import FileObject, ImageLoader
-from mediacatalogue.imageviewer import ImageViewerWidget
+from mediacatalogue.imageviewer import (
+    available_image_viewer_widgets, ImageViewerWidget)
 
 default_item_spacing = 5
 default_item_size = (285, 150)
@@ -353,10 +354,11 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
     def on_thumbnail_double_clicked(self, item):
         if item.thumbnail_image.file_object.is_image:
-            viewer = ImageViewerWidget(self)
+            viewer = ImageViewerWidget()
             viewer.set_image_file_path(
                 item.thumbnail_image.file_object.filePath())
             viewer.show()
+            available_image_viewer_widgets.append(viewer)
             self.viewer_created.emit(viewer, self.model)
 
 

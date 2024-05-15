@@ -5,6 +5,7 @@ from mediacatalogue.image import ImageLoader
 image_viewer_default_size = (800, 500)
 history_widget_width = None
 scale_factor = 1.25
+available_image_viewer_widgets = []
 
 
 class ImageView(QtWidgets.QGraphicsView):
@@ -199,6 +200,8 @@ class ImageViewerWidget(QtWidgets.QWidget):
                 self.toggle_frameless_mode()
 
     def closeEvent(self, event):  # noqa N802
+        if self in available_image_viewer_widgets:
+            available_image_viewer_widgets.remove(self)
         return QtWidgets.QWidget.closeEvent(self, event)
 
     def showEvent(self, event):  # noqa N802
