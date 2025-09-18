@@ -3,7 +3,7 @@ from functools import partial
 from mediacatalogue.qt import QtCore, QtWidgets, QtGui
 from mediacatalogue.categories import (
     get_categories_by_family, get_category_item, get_collection_item)
-from mediacatalogue.thumbnails import ThumbnailsWidget
+from mediacatalogue.thumbnails import ThumbnailsContainerWidget
 from mediacatalogue.imageviewer import available_image_viewer_widgets
 
 collections_view_minimum_width = 100
@@ -79,37 +79,63 @@ class CollectionsWidget(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
 
+def _fill_collection_from_files(thumbnails_widget, collection, files):
+    for file in files:
+        thumbnails_widget.add_collection_item(file.path, collection=collection)
+
+
 class ContextWidget(QtWidgets.QWidget):
     def __init__(self, context_name, parent=None):
         super().__init__(parent=parent)
         self.context_name = context_name
         self.collections_widget = CollectionsWidget(self)
-        self.thumbnail_widget = ThumbnailsWidget(self)
+        self.thumbnails_container_widget = ThumbnailsContainerWidget(self)
+
+        # Set if container widget uses tabs
+        category = get_category_item(context_name)
+        self.thumbnails_container_widget.set_content(
+            use_tabs=category.expand_group)
+
+        # Layout
         main_layout = QtWidgets.QHBoxLayout()
         splitter = QtWidgets.QSplitter()
         splitter.addWidget(self.collections_widget)
-        splitter.addWidget(self.thumbnail_widget)
+        splitter.addWidget(self.thumbnails_container_widget)
         main_layout.addWidget(splitter)
         splitter.setStretchFactor(1, 2)
         self.setLayout(main_layout)
 
+        # Signals
         self.collections_widget.model.item_checked.connect(
             self.on_collection_checked, QtCore.Qt.QueuedConnection)
-        self.thumbnail_widget.viewer_created.connect(self.on_viewer_created)
+        self.thumbnails_container_widget.viewer_created.connect(
+            self.on_viewer_created)
 
     def on_collection_checked(self, item):
-        if item.checked:
-            category = get_category_item(self.context_name)
-            if category is None:
-                return
-            collection = get_collection_item(category, item.name)
-            if collection is None:
-                return
-            for path in collection.files:
-                self.thumbnail_widget.add_collection_item(
-                    path, collection=item.name)
+        if not item.checked:
+            for tw in self.thumbnails_container_widget.thumbnails_widgets:
+                tw.remove_collection_items(collection=item.name)
+            return
+        category = get_category_item(self.context_name)
+        if category is None:
+            return
+        collection = get_collection_item(category, item.name)
+        if collection is None:
+            return
+        if category.expand_group is False:
+            tw = self.thumbnails_container_widget.current_thumbnails_widget()
+            _fill_collection_from_files(
+                thumbnails_widget=tw,
+                collection=item.name,
+                files=collection.files)
         else:
-            self.thumbnail_widget.remove_collection_items(collection=item.name)
+            for group, files in collection.files_by_group().items():
+                tw = self.thumbnails_container_widget.add_thumbnails_widget(
+                    group)
+                _fill_collection_from_files(
+                    thumbnails_widget=tw,
+                    collection=item.name,
+                    files=files)
 
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
         image_viewer_widget.history_show.connect(self.on_history_show)

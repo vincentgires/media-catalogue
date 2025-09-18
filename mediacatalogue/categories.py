@@ -3,9 +3,29 @@ from typing import Callable
 
 
 @dataclass
+class FileItem():
+    path: str
+    group: str | None = None
+
+
+@dataclass
 class CollectionItem():
     name: str
-    files: list[str]
+    files: list[FileItem]
+
+    def get_groups(self) -> list[str]:
+        return sorted({f.group for f in self.files if f.group is not None})
+
+    def get_files_in_group(self, group: str) -> list[FileItem]:
+        return [f for f in self.files if f.group == group]
+
+    def files_by_group(self) -> dict[str | None, list[FileItem]]:
+        grouped: dict[str | None, list[FileItem]] = {}
+        for f in self.files:
+            if f.group is None:
+                continue
+            grouped.setdefault(f.group, []).append(f)
+        return grouped
 
 
 @dataclass
@@ -16,6 +36,7 @@ class CategoryItem:
     previous: str
     find_history: Callable
     collections: list[CollectionItem]
+    expand_group: bool = False
 
 
 categories: list[CategoryItem] = []

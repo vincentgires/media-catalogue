@@ -371,6 +371,71 @@ def _get_items_from_model(model):
     return items
 
 
+class ThumbnailsContainerWidget(QtWidgets.QWidget):
+    """A container for ThumbnailsWidget instances
+
+    It can work in two modes:
+      - single mode: just one ThumbnailsWidget
+      - tabbed mode: multiple ThumbnailsWidget inside a QTabWidget
+    """
+
+    item_added = QtCore.Signal(QtGui.QStandardItem)
+    viewer_created = QtCore.Signal(ImageViewerWidget, ThumbnailItemModel)
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.thumbnails_widgets = []
+        self.layout = QtWidgets.QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+    def set_content(self, use_tabs: bool = False):
+        self.use_tabs = use_tabs
+
+        if use_tabs:
+            self._tabs = QtWidgets.QTabWidget(self)
+            self.layout.addWidget(self._tabs)
+
+        else:
+            tw = ThumbnailsWidget(self)
+            tw.item_added.connect(self.item_added)
+            tw.viewer_created.connect(self.viewer_created)
+            self.layout.addWidget(tw)
+            self.thumbnails_widgets.append(tw)
+
+    def add_thumbnails_widget(self, label: str = None):
+        if label is not None:
+            existing = self.get_thumbnails_widget(label)
+            # Return existing widget if it has the same label
+            if existing:
+                return existing  # Don't recreate if label exists
+
+        tw = ThumbnailsWidget(self)
+        tw.item_added.connect(self.item_added)  # Relay signals
+        tw.viewer_created.connect(self.viewer_created)
+        self.thumbnails_widgets.append(tw)
+
+        if self.use_tabs:
+            if label is None:
+                label = f'View {len(self.thumbnails_widgets)}'
+            self._tabs.addTab(tw, label)
+        return tw
+
+    def current_thumbnails_widget(self):
+        if self.use_tabs:
+            return self._tabs.currentWidget()
+        return self.thumbnails_widgets[0] if self.thumbnails_widgets else None
+
+    def get_thumbnails_widget(self, label: str) -> ThumbnailsWidget | None:
+        if not self.use_tabs:
+            # In single mode, just return the first widget if it exists
+            return (
+                self.thumbnails_widgets[0]
+                if self.thumbnails_widgets else None)
+        for index in range(self._tabs.count()):
+            if self._tabs.tabText(index) == label:
+                return self._tabs.widget(index)
+
+
 def run_standalone(files=None):
     def expand_path(path):
         return os.path.expandvars(os.path.expanduser(path))
