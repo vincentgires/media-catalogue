@@ -3,7 +3,40 @@ import threading
 from mediacatalogue.qt import QtCore, QtGui
 import OpenImageIO as oiio
 
-hdr_extensions = ['.exr', '.hdr']
+
+# QtMimeDatabase may fail identify some formats like .hdr, so there's a manual
+# mapping when necessary.
+ext_to_mime = {
+    '.hdr': 'image/vnd.radiance',
+    '.exr': 'image/x-exr'}
+
+
+def get_mime_type_for_file(path: str) -> str:
+    """Get the MIME type of a file based on its content or extension
+
+    Some formats like .hdr are not correctly recognized by QtMimeDatabase (.hdr
+    may be detected as text/x-mpsub). A manual mapping for these special cases,
+    otherwise fall back to Qt's detection.
+    """
+    _, ext = os.path.splitext(path)
+    return ext_to_mime.get(
+        ext.lower(), QtCore.QMimeDatabase().mimeTypeForFile(path).name())
+
+
+def get_supported_mimes():
+    mime_db = QtCore.QMimeDatabase()
+    mimes = set()
+    for ext_bytes in QtGui.QImageReader.supportedImageFormats():
+        ext = ext_bytes.data().decode()
+        dummy_filename = f'file.{ext}'
+        mimes.add(mime_db.mimeTypeForFile(dummy_filename).name())
+    return mimes
+
+
+supported_mimes = get_supported_mimes()
+hdr_mimes = {  # These types will be handled by OpenImageIO
+    'image/vnd.radiance',
+    'image/x-exr'}
 
 
 class FileObject(QtCore.QFileInfo):
@@ -14,15 +47,11 @@ class FileObject(QtCore.QFileInfo):
 
     @property
     def is_image(self):
-        supported_formats = QtGui.QImageReader.supportedImageFormats()
-        supported_extensions = [
-            f'.{format.data().decode()}'
-            for format in supported_formats] + hdr_extensions
-        return self.file_extension in supported_extensions
+        return self.file_mime in supported_mimes | hdr_mimes
 
     @property
-    def file_extension(self):
-        return os.path.splitext(self.filePath().lower())[1] or None
+    def file_mime(self):
+        return get_mime_type_for_file(self.filePath())
 
 
 class ImageLoader(QtCore.QObject):
@@ -40,7 +69,9 @@ class ImageLoader(QtCore.QObject):
 
     def run(self):
         file_path = self.file_object.filePath()
-        if file_path.lower().endswith(tuple(hdr_extensions)):
+        file_mime = self.file_object.file_mime
+        self.load_regular_image(file_path)
+        if file_mime in hdr_mimes:
             self.load_hdr_image(file_path)
         else:
             self.load_regular_image(file_path)
