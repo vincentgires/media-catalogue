@@ -184,7 +184,8 @@ class ContextWidget(QtWidgets.QWidget):
             return
 
         file = image_viewer_widget.history_widget.initial_filepath
-        view_model = self.thumbnail_widget.view.model()
+        cur_w = self.thumbnails_container_widget.current_thumbnails_widget()
+        view_model = cur_w.view.model()
 
         view_indexes = []
         for proxy_row in range(view_model.rowCount()):
