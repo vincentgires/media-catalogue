@@ -2,7 +2,8 @@ import os
 from functools import partial
 from mediacatalogue.qt import QtCore, QtWidgets, QtGui
 from mediacatalogue.categories import (
-    get_categories_by_family, get_category_item, get_collection_item)
+    get_categories_by_family, get_category_item,
+    CollectionItem as CollectionItemData)
 from mediacatalogue.thumbnails import ThumbnailsContainerWidget
 from mediacatalogue.imageviewer import available_image_viewer_widgets
 
@@ -10,27 +11,42 @@ collections_view_minimum_width = 100
 
 
 class CollectionItem():
-    def __init__(self, name=None):
-        self.name = name or 'none'
+    def __init__(self, data=None, parent=None):
+        self.name = data.name or 'none'
         self.checked = QtCore.Qt.Unchecked
+        self.children = []
+        self.parent = parent
+        self.data: CollectionItemData = data  # Keep reference to original data
+        # item
+
+    def add_child(self, child):
+        child.parent = self
+        self.children.append(child)
 
     def display_role(self):
         return self.name
 
 
-class CollectionsModel(QtCore.QAbstractListModel):
+class CollectionsModel(QtCore.QAbstractItemModel):
     item_checked = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.items = []
 
-    def rowCount(self, index):  # noqa N802
-        return len(self.items)
+    def columnCount(self, parent):
+        return 1
+
+    def rowCount(self, parent):
+        if not parent.isValid():
+            return len(self.items)
+        item = parent.internalPointer()
+        return len(item.children)
 
     def flags(self, index):
         return (
-            QtCore.QAbstractListModel.flags(self, index)
+            QtCore.Qt.ItemIsEnabled
+            | QtCore.Qt.ItemIsSelectable
             | QtCore.Qt.ItemIsUserCheckable)
 
     def data(self, index, role):
@@ -42,24 +58,41 @@ class CollectionsModel(QtCore.QAbstractListModel):
                 return item.display_role()
 
     def index(self, row, column, parent):
-        item = self.items[row]
-        index = self.createIndex(row, column, item)
-        return index
+        if not parent.isValid():
+            item = self.items[row]
+        else:
+            item = parent.internalPointer().children[row]
+        return self.createIndex(row, column, item)
 
-    def setData(self, index, value, role):  # noqa N802
+    def parent(self, index):
+        if not index.isValid():
+            return QtCore.QModelIndex()
+        item = index.internalPointer()
+        if item.parent is None:
+            return QtCore.QModelIndex()
+        parent_item = item.parent
+        if parent_item.parent is None:
+            row = self.items.index(parent_item)
+        else:
+            row = parent_item.parent.children.index(parent_item)
+        return self.createIndex(row, 0, parent_item)
+
+    def setData(self, index, value, role):
         if role == QtCore.Qt.CheckStateRole:
             item = index.internalPointer()
             item.checked = value
-            self.dataChanged.emit(index, index, 0)
+            self.dataChanged.emit(index, index, [QtCore.Qt.CheckStateRole])
             self.item_checked.emit(item)
             return True
         return False
 
 
-class CollectionsView(QtWidgets.QListView):
+class CollectionsView(QtWidgets.QTreeView):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.setHeaderHidden(True)
+        self.setRootIsDecorated(True)  # Dislpay arrows for item with children
 
     def sizeHint(self):  # noqa N802
         return QtCore.QSize(collections_view_minimum_width, 0)
@@ -119,7 +152,7 @@ class ContextWidget(QtWidgets.QWidget):
         category = get_category_item(self.context_name)
         if category is None:
             return
-        collection = get_collection_item(category, item.name)
+        collection = item.data
         if collection is None:
             return
         if category.expand_group is False:
@@ -224,6 +257,23 @@ class ContextWidget(QtWidgets.QWidget):
             self._fill_history(image_viewer_widget)
 
 
+def build_tree_items(
+        collections: list[CollectionItemData]) -> list[CollectionItem]:
+    """Convert categoriy data item into UI for the tree view"""
+
+    items = []
+    for data in collections:
+        node = CollectionItem(data=data)
+
+        # Recursively add sub-collections as children
+        if data.collections:
+            for sub in build_tree_items(data.collections):
+                node.add_child(sub)
+
+        items.append(node)
+    return items
+
+
 class ContextDockWidget(QtWidgets.QDockWidget):
     def __init__(self, name):
         super().__init__()
@@ -316,7 +366,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         # Build collections elements
-        items = [CollectionItem(i.name) for i in category_item.collections]
+        items = build_tree_items(category_item.collections)
         context_widget.collections_widget.model.items = items
 
         dock_contexttab = ContextDockWidget(context)

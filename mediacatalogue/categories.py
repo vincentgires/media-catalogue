@@ -12,6 +12,7 @@ class FileItem():
 class CollectionItem():
     name: str
     files: list[FileItem]
+    collections: list['CollectionItem'] | None = None
 
     def get_groups(self) -> list[str]:
         return sorted({f.group for f in self.files if f.group is not None})
@@ -58,11 +59,5 @@ def get_category_item(name: str) -> CategoryItem:
     if categories is None:
         return
     for item in categories:
-        if item.name == name:
-            return item
-
-
-def get_collection_item(item: CategoryItem, name: str):
-    for item in item.collections:
         if item.name == name:
             return item
