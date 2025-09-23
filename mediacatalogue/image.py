@@ -68,9 +68,10 @@ class ImageLoader(QtCore.QObject):
         self.target_size = size
 
     def run(self):
+        if not self.file_object.is_image:
+            return
         file_path = self.file_object.filePath()
         file_mime = self.file_object.file_mime
-        self.load_regular_image(file_path)
         if file_mime in hdr_mimes:
             self.load_hdr_image(file_path)
         else:
