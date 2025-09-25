@@ -127,7 +127,7 @@ class CollectionsWidget(QtWidgets.QWidget):
 
 
 def _fill_collection_from_files(
-        thumbnails_widget, collection, files, files_loader):
+        thumbnails_widget, collection, files, files_loader, collection_item):
     if files_loader is not None:
         files = files_loader(item=collection)
     if files is None:
@@ -135,7 +135,7 @@ def _fill_collection_from_files(
     for file in files:
         thumbnails_widget.add_collection_item(
             file.path,
-            collection=collection.name)
+            collection_item=collection_item)
 
 
 class ContextWidget(QtWidgets.QWidget):
@@ -198,7 +198,7 @@ class ContextWidget(QtWidgets.QWidget):
     def on_collection_checked(self, item):
         if not item.checked:
             for tw in self.thumbnails_container_widget.thumbnails_widgets:
-                tw.remove_collection_items(collection=item.name)
+                tw.remove_collection_items(collection_item=item)
             return
         category = get_category_item(self.context_name)
         if category is None:
@@ -212,7 +212,8 @@ class ContextWidget(QtWidgets.QWidget):
                 thumbnails_widget=tw,
                 collection=collection,
                 files=collection.files,
-                files_loader=collection.files_loader)
+                files_loader=collection.files_loader,
+                collection_item=item)
         else:
             for group, files in collection.files_by_group().items():
                 tw = self.thumbnails_container_widget.add_thumbnails_widget(
@@ -221,7 +222,8 @@ class ContextWidget(QtWidgets.QWidget):
                     thumbnails_widget=tw,
                     collection=collection,
                     files=files,
-                    files_loader=collection.files_loader)
+                    files_loader=collection.files_loader,
+                    collection_item=item)
 
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
         image_viewer_widget.history_show.connect(self.on_history_show)

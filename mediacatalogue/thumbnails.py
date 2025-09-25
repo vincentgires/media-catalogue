@@ -337,19 +337,19 @@ class ThumbnailsWidget(QtWidgets.QWidget):
     def send_item_to_thread_pool(self, item):
         _thread_pool_executor.submit(_process_item, item)
 
-    def add_collection_item(self, path, collection=None):
+    def add_collection_item(self, path, collection_item=None):
         item = ThumbnailItem(path)
-        item.collection = collection  # Identifier to get from which
+        item.collection_item = collection_item  # Identifier to get from which
         # collection the item was added and be able to be deleted when
         # collection is unchecked
         item.setSizeHint(self.view.iconSize())
         self.model.appendRow(item)
         self.item_added.emit(item)
 
-    def remove_collection_items(self, item_path=None, collection=None):
+    def remove_collection_items(self, item_path=None, collection_item=None):
         items = _get_items_from_model(self.model)
         for item in items:
-            if item.collection == collection:
+            if item.collection_item == collection_item:
                 self.model.removeRow(item.row())
 
     def on_thumbnail_double_clicked(self, item):
