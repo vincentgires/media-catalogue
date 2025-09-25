@@ -131,7 +131,7 @@ def _fill_collection_from_files(
         collection_data: CollectionItemData,
         collection_item: CollectionItem,
         expand_group: bool = False):
-    files = collection_data.load_files()
+    files = collection_data.load_files(force=True)
     if files is None:
         return
     if not expand_group:
