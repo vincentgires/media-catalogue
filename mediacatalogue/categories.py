@@ -11,7 +11,9 @@ class FileItem():
 @dataclass
 class CollectionItem():
     name: str
-    files: list[FileItem]
+    files: list[FileItem] | None = None
+    files_loader: Callable[  # For lazy loading
+        [FileItem], list[FileItem]] | None = None
     collections: list['CollectionItem'] | None = None
     collections_loader: Callable[  # For lazy loading
         ['CollectionItem'], list['CollectionItem']] | None = None
@@ -29,12 +31,6 @@ class CollectionItem():
                 continue
             grouped.setdefault(f.group, []).append(f)
         return grouped
-
-    def load_children(self, refresh: bool = False) -> list['CollectionItem']:
-        if refresh or self.collections is None:
-            if self.collections_loader:
-                self.collections = self.collections_loader(self)
-        return self.collections or []
 
 
 @dataclass

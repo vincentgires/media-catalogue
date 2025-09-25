@@ -13,6 +13,8 @@ collections_view_minimum_width = 100
 class CollectionItem():
     def __init__(self, data=None, parent=None):
         self.name = data.name or 'none'
+        self.checkable = self.checkable = bool(data.files or data.files_loader)
+        # Item is checkable if it has files or a loader function defined
         self.checked = QtCore.Qt.Unchecked
         self.children = []
         self.parent = parent
@@ -47,16 +49,18 @@ class CollectionsModel(QtCore.QAbstractItemModel):
         return len(item.children)
 
     def flags(self, index):
-        return (
-            QtCore.Qt.ItemIsEnabled
-            | QtCore.Qt.ItemIsSelectable
-            | QtCore.Qt.ItemIsUserCheckable)
+        item = index.internalPointer()
+        flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        if getattr(item, 'checkable', False):
+            flags |= QtCore.Qt.ItemIsUserCheckable
+        return flags
 
     def data(self, index, role):
         item = index.internalPointer()
         match role:
             case QtCore.Qt.CheckStateRole:
-                return item.checked
+                if getattr(item, 'checkable', False):
+                    return item.checked
             case QtCore.Qt.DisplayRole:
                 return item.display_role()
 
@@ -122,9 +126,16 @@ class CollectionsWidget(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
 
-def _fill_collection_from_files(thumbnails_widget, collection, files):
+def _fill_collection_from_files(
+        thumbnails_widget, collection, files, files_loader):
+    if files_loader is not None:
+        files = files_loader(item=collection)
+    if files is None:
+        return
     for file in files:
-        thumbnails_widget.add_collection_item(file.path, collection=collection)
+        thumbnails_widget.add_collection_item(
+            file.path,
+            collection=collection.name)
 
 
 class ContextWidget(QtWidgets.QWidget):
@@ -199,16 +210,18 @@ class ContextWidget(QtWidgets.QWidget):
             tw = self.thumbnails_container_widget.current_thumbnails_widget()
             _fill_collection_from_files(
                 thumbnails_widget=tw,
-                collection=item.name,
-                files=collection.files)
+                collection=collection,
+                files=collection.files,
+                files_loader=collection.files_loader)
         else:
             for group, files in collection.files_by_group().items():
                 tw = self.thumbnails_container_widget.add_thumbnails_widget(
                     group)
                 _fill_collection_from_files(
                     thumbnails_widget=tw,
-                    collection=item.name,
-                    files=files)
+                    collection=collection,
+                    files=files,
+                    files_loader=collection.files_loader)
 
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
         image_viewer_widget.history_show.connect(self.on_history_show)
