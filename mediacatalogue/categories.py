@@ -18,20 +18,25 @@ class CollectionItem():
     collections_loader: Callable[  # For lazy loading
         ['CollectionItem'], list['CollectionItem']] | None = None
 
+    def load_files(self, force: bool = False) -> list[FileItem]:
+        if self.files_loader is not None and (self.files is None or force):
+            self.files = self.files_loader(self)
+        return self.files or []
+
     def get_groups(self) -> list[str]:
-        return sorted({f.group for f in self.files if f.group is not None})
+        return sorted({
+            f.group for f in self.load_files() if f.group is not None})
 
     def get_files_in_group(self, group: str) -> list[FileItem]:
-        return [f for f in self.files if f.group == group]
+        return [f for f in self.load_files() if f.group == group]
 
     def files_by_group(self) -> dict[str | None, list[FileItem]]:
         grouped: dict[str | None, list[FileItem]] = {}
-        for f in self.files:
+        for f in self.load_files():
             if f.group is None:
                 continue
             grouped.setdefault(f.group, []).append(f)
         return grouped
-
 
 @dataclass
 class CategoryItem:

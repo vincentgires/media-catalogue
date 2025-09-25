@@ -127,15 +127,23 @@ class CollectionsWidget(QtWidgets.QWidget):
 
 
 def _fill_collection_from_files(
-        thumbnails_widget, collection, files, files_loader, collection_item):
-    if files_loader is not None:
-        files = files_loader(item=collection)
+        thumbnails_container_widget: ThumbnailsContainerWidget,
+        collection_data: CollectionItemData,
+        collection_item: CollectionItem,
+        expand_group: bool = False):
+    files = collection_data.load_files()
     if files is None:
         return
-    for file in files:
-        thumbnails_widget.add_collection_item(
-            file.path,
-            collection_item=collection_item)
+    if not expand_group:
+        tw = thumbnails_container_widget.current_thumbnails_widget()
+        for file in files:
+            tw.add_collection_item(file.path, collection_item=collection_item)
+    else:
+        for group, grouped_files in collection_data.files_by_group().items():
+            tw = thumbnails_container_widget.add_thumbnails_widget(group)
+            for file in grouped_files:
+                tw.add_collection_item(
+                    file.path, collection_item=collection_item)
 
 
 class ContextWidget(QtWidgets.QWidget):
@@ -203,27 +211,14 @@ class ContextWidget(QtWidgets.QWidget):
         category = get_category_item(self.context_name)
         if category is None:
             return
-        collection = item.data
-        if collection is None:
+        collection_data = item.data
+        if collection_data is None:
             return
-        if category.expand_group is False:
-            tw = self.thumbnails_container_widget.current_thumbnails_widget()
-            _fill_collection_from_files(
-                thumbnails_widget=tw,
-                collection=collection,
-                files=collection.files,
-                files_loader=collection.files_loader,
-                collection_item=item)
-        else:
-            for group, files in collection.files_by_group().items():
-                tw = self.thumbnails_container_widget.add_thumbnails_widget(
-                    group)
-                _fill_collection_from_files(
-                    thumbnails_widget=tw,
-                    collection=collection,
-                    files=files,
-                    files_loader=collection.files_loader,
-                    collection_item=item)
+        _fill_collection_from_files(
+            thumbnails_container_widget=self.thumbnails_container_widget,
+            collection_data=collection_data,
+            collection_item=item,
+            expand_group=category.expand_group)
 
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
         image_viewer_widget.history_show.connect(self.on_history_show)
