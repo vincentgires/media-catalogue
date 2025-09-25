@@ -16,6 +16,9 @@ class CollectionItem():
         self.checked = QtCore.Qt.Unchecked
         self.children = []
         self.parent = parent
+        self.expandable = data.collections_loader is not None  # Expose arrow
+        # to expand tree even if no children set, for lazy loading. Only if
+        # loader function is defined.
         self.data: CollectionItemData = data  # Keep reference to original data
         # item
 
@@ -86,6 +89,13 @@ class CollectionsModel(QtCore.QAbstractItemModel):
             return True
         return False
 
+    def hasChildren(self, parent):
+        if not parent.isValid():
+            return len(self.items) > 0
+        item = parent.internalPointer()
+        # Real children or unknown for lazy loading
+        return bool(item.children) or item.expandable
+
 
 class CollectionsView(QtWidgets.QTreeView):
     def __init__(self, parent=None):
@@ -143,6 +153,36 @@ class ContextWidget(QtWidgets.QWidget):
             self.on_collection_checked, QtCore.Qt.QueuedConnection)
         self.thumbnails_container_widget.viewer_created.connect(
             self.on_viewer_created)
+        self.collections_widget.view.expanded.connect(self.on_item_expanded)
+
+    def on_item_expanded(
+            self, index: QtCore.QModelIndex, refresh: bool = True):
+        item: CollectionItem = index.internalPointer()
+        model = self.collections_widget.model
+
+        if not item.expandable:
+            return
+
+        if refresh or not item.children:
+            children_data = item.data.collections_loader(item.data)
+            if children_data is None:
+                children_data = []
+
+            # Delete loaded children
+            old_count = len(item.children)
+            if old_count > 0:
+                model.beginRemoveRows(index, 0, old_count - 1)
+                item.children.clear()
+                model.endRemoveRows()
+
+            # Add new ones
+            new_count = len(children_data)
+            if new_count > 0:
+                model.beginInsertRows(index, 0, new_count - 1)
+                for child_data in children_data:
+                    child_item = CollectionItem(data=child_data, parent=item)
+                    item.add_child(child_item)
+                model.endInsertRows()
 
     def on_collection_checked(self, item):
         if not item.checked:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable
+from collections.abc import Callable
 
 
 @dataclass
@@ -13,6 +13,8 @@ class CollectionItem():
     name: str
     files: list[FileItem]
     collections: list['CollectionItem'] | None = None
+    collections_loader: Callable[  # For lazy loading
+        ['CollectionItem'], list['CollectionItem']] | None = None
 
     def get_groups(self) -> list[str]:
         return sorted({f.group for f in self.files if f.group is not None})
@@ -27,6 +29,12 @@ class CollectionItem():
                 continue
             grouped.setdefault(f.group, []).append(f)
         return grouped
+
+    def load_children(self, refresh: bool = False) -> list['CollectionItem']:
+        if refresh or self.collections is None:
+            if self.collections_loader:
+                self.collections = self.collections_loader(self)
+        return self.collections or []
 
 
 @dataclass
