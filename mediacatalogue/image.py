@@ -1,8 +1,11 @@
 import os
 import threading
 from mediacatalogue.qt import QtCore, QtGui
-import OpenImageIO as oiio
-
+try:
+    import OpenImageIO as oiio
+    _oiio_available = True
+except ImportError:
+    _oiio_available = False
 
 # QtMimeDatabase may fail identify some formats like .hdr, so there's a manual
 # mapping when necessary.
@@ -73,7 +76,10 @@ class ImageLoader(QtCore.QObject):
         file_path = self.file_object.filePath()
         file_mime = self.file_object.file_mime
         if file_mime in hdr_mimes:
-            self.load_hdr_image(file_path)
+            if _oiio_available:
+                self.load_hdr_image(file_path)
+            else:
+                print('OpenImageIO is not installed. Cannot load HDR images.')
         else:
             self.load_regular_image(file_path)
 
