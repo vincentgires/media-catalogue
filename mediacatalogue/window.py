@@ -174,34 +174,42 @@ class ContextWidget(QtWidgets.QWidget):
             self.on_viewer_created)
         self.collections_widget.view.expanded.connect(self.on_item_expanded)
 
-    def on_item_expanded(
-            self, index: QtCore.QModelIndex, refresh: bool = True):
+    def on_item_expanded(self, index: QtCore.QModelIndex):
         item: CollectionItem = index.internalPointer()
         model = self.collections_widget.model
 
         if not item.expandable:
             return
 
-        if refresh or not item.children:
-            children_data = item.data.collections_loader(item.data)
-            if children_data is None:
-                children_data = []
+        children_data = item.data.collections_loader(item.data) or []
 
-            # Delete loaded children
-            old_count = len(item.children)
-            if old_count > 0:
-                model.beginRemoveRows(index, 0, old_count - 1)
-                item.children.clear()
+        # Get existing on new item to manage
+        existing_by_name = {c.name: c for c in item.children}
+        new_by_name = {d.name: d for d in children_data}
+
+        # Children to delete
+        to_remove = [c for c in item.children if c.name not in new_by_name]
+        if to_remove:
+            for child in reversed(to_remove):
+                row = item.children.index(child)
+                model.beginRemoveRows(index, row, row)
+                item.children.pop(row)
                 model.endRemoveRows()
 
-            # Add new ones
-            new_count = len(children_data)
-            if new_count > 0:
-                model.beginInsertRows(index, 0, new_count - 1)
-                for child_data in children_data:
-                    child_item = CollectionItem(data=child_data, parent=item)
-                    item.add_child(child_item)
-                model.endInsertRows()
+        # New children to add
+        new_children = []
+        for child_data in children_data:
+            if child_data.name not in existing_by_name:
+                new_children.append(
+                    CollectionItem(data=child_data, parent=item))
+
+        if new_children:
+            start = len(item.children)
+            end = start + len(new_children) - 1
+            model.beginInsertRows(index, start, end)
+            for c in new_children:
+                item.add_child(c)
+            model.endInsertRows()
 
     def on_collection_checked(self, item):
         if not item.checked:
