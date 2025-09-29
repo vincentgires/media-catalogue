@@ -22,6 +22,7 @@ class ThumbnailItem(QtGui.QStandardItem):
         self.thumbnail_image = ImageLoader(image_path)
         self.thumbnail_image.image_loaded.connect(
             self.emitDataChanged, QtCore.Qt.QueuedConnection)
+        self.tags: dict[str, str] = {}
         item_background_brush = QtGui.QBrush(QtCore.Qt.Dense6Pattern)
         item_font = QtGui.QFont()
         self.setEditable(False)
@@ -153,6 +154,18 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
         super().__init__(parent)
         self.setDynamicSortFilter(True)
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        self.active_filters: dict[str, str] = {}
+
+    def filterAcceptsRow(self, source_row, source_parent):  # noqa N802
+        index = self.sourceModel().index(source_row, 0, source_parent)
+        item = self.sourceModel().itemFromIndex(index)
+        tags = item.tags or {}
+        for key, values in self.active_filters.items():
+            if not isinstance(values, (list, tuple, set)):
+                values = [values]
+            if tags.get(key) not in values:
+                return False
+        return True
 
 
 class ThumbnailView(QtWidgets.QListView):
@@ -247,10 +260,6 @@ class ThumbnailView(QtWidgets.QListView):
                 self.setFlow(QtWidgets.QListView.LeftToRight)
                 self.setResizeMode(QtWidgets.QListView.Adjust)
 
-    def set_proxy_filter(self, pattern):
-        model = self.model()
-        model.setFilterRegularExpression(pattern)
-
 
 class ViewControlsWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -281,17 +290,110 @@ class ViewControlsWidget(QtWidgets.QWidget):
         self.main_layout.addStretch(1)
 
 
+class FilterTag(QtWidgets.QFrame):
+    removed = QtCore.Signal(object)
+
+    def __init__(self, key: str, value: str, parent=None):
+        super().__init__(parent)
+        self.key = key
+        self.value = value
+        self.setFrameShape(QtWidgets.QFrame.Box)
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(2)
+
+        self.label = QtWidgets.QLabel(f'{key}:{value}')
+        layout.addWidget(self.label)
+
+        self.btn_remove = QtWidgets.QPushButton('x')
+        self.btn_remove.setFixedSize(16, 16)
+        self.btn_remove.clicked.connect(self.on_remove)
+        layout.addWidget(self.btn_remove)
+
+    def on_remove(self):
+        self.removed.emit(self)
+
+
+class AddFilterDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('add filter')
+        self.key_edit = QtWidgets.QLineEdit()
+        self.value_edit = QtWidgets.QLineEdit()
+        self.ok_btn = QtWidgets.QPushButton('ok')
+        self.cancel_btn = QtWidgets.QPushButton('cancel')
+
+        layout = QtWidgets.QFormLayout(self)
+        layout.addRow('key', self.key_edit)
+        layout.addRow('value', self.value_edit)
+
+        btn_layout = QtWidgets.QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.ok_btn)
+        btn_layout.addWidget(self.cancel_btn)
+        layout.addRow(btn_layout)
+
+        self.ok_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.reject)
+
+    def get_data(self):
+        return self.key_edit.text(), self.value_edit.text()
+
+
+class FiltersBar(QtWidgets.QWidget):
+    filters_changed = QtCore.Signal(dict)
+
+    def __init__(self):
+        super().__init__()
+        self.tags = []
+
+        self.layout = QtWidgets.QHBoxLayout(self)
+        self.layout.setContentsMargins(*(0,) * 4)
+        self.layout.setSpacing(4)
+
+        self.btn_add = QtWidgets.QPushButton('+')
+        self.btn_add.setFixedWidth(24)
+        self.btn_add.clicked.connect(self.add_new_filter)
+        self.layout.addWidget(self.btn_add)
+        self.layout.addStretch(1)
+
+    def add_filter(self, key: str, value: str):
+        tag = FilterTag(key, value)
+        tag.removed.connect(self.remove_filter)
+        self.tags.append(tag)
+        self.layout.insertWidget(self.layout.count() - 1, tag)
+        self.emit_filters()
+
+    def remove_filter(self, tag: FilterTag):
+        self.tags.remove(tag)
+        tag.setParent(None)
+        tag.deleteLater()
+        self.emit_filters()
+
+    def add_new_filter(self):
+        dlg = AddFilterDialog(self)
+        if dlg.exec() == QtWidgets.QDialog.Accepted:
+            key, value = dlg.get_data()
+            if key and value:
+                self.add_filter(key, value)
+
+    def emit_filters(self):
+        filters: dict[str, list[str]] = {}
+        for tag in self.tags:
+            filters.setdefault(tag.key, []).append(tag.value)
+        self.filters_changed.emit(filters)
+
+
 class SearchInViewControls(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(SearchInViewControls, self).__init__(parent)
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setSizeConstraint(
             QtWidgets.QLayout.SizeConstraint.SetFixedSize)
-        label = QtWidgets.QLabel('filter')
-        self.line_edit = QtWidgets.QLineEdit(self)
-        self.line_edit.setFixedWidth(300)
+        label = QtWidgets.QLabel('filters')
+        self.filters = FiltersBar()
         self.main_layout.addWidget(label)
-        self.main_layout.addWidget(self.line_edit)
+        self.main_layout.addWidget(self.filters)
         self.setLayout(self.main_layout)
 
 
@@ -317,8 +419,8 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             self.view._update_all_items, QtCore.Qt.QueuedConnection)
         self.view_controls.spacing_slider.valueChanged.connect(
             self.view.setSpacing, QtCore.Qt.QueuedConnection)
-        self.search_controls.line_edit.textChanged.connect(
-            self.view.set_proxy_filter)
+        self.search_controls.filters.filters_changed.connect(
+            self.on_filters_changed)
 
         self.view.view_item.connect(self.on_thumbnail_double_clicked)
 
@@ -337,8 +439,9 @@ class ThumbnailsWidget(QtWidgets.QWidget):
     def send_item_to_thread_pool(self, item):
         _thread_pool_executor.submit(_process_item, item)
 
-    def add_collection_item(self, path, collection_item=None):
+    def add_collection_item(self, path, tags=None, collection_item=None):
         item = ThumbnailItem(path)
+        item.tags = tags
         item.collection_item = collection_item  # Identifier to get from which
         # collection the item was added and be able to be deleted when
         # collection is unchecked
@@ -360,6 +463,10 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             viewer.show()
             available_image_viewer_widgets.append(viewer)
             self.viewer_created.emit(viewer, self.model)
+
+    def on_filters_changed(self, filters: dict[str, list[str]]):
+        self.proxy_model.active_filters = filters
+        self.proxy_model.invalidateFilter()
 
 
 def _get_items_from_model(model):

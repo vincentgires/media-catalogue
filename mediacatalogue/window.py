@@ -137,13 +137,18 @@ def _fill_collection_from_files(
     if not expand_group:
         tw = thumbnails_container_widget.current_thumbnails_widget()
         for file in files:
-            tw.add_collection_item(file.path, collection_item=collection_item)
+            tw.add_collection_item(
+                path=file.path,
+                tags=file.tags,
+                collection_item=collection_item)
     else:
         for group, grouped_files in collection_data.files_by_group().items():
             tw = thumbnails_container_widget.add_thumbnails_widget(group)
             for file in grouped_files:
                 tw.add_collection_item(
-                    file.path, collection_item=collection_item)
+                    file.path,
+                    tags=file.tags,
+                    collection_item=collection_item)
 
 
 class ContextWidget(QtWidgets.QWidget):
