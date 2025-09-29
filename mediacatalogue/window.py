@@ -422,11 +422,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.add_context_tab(category)
 
     def add_context_tab(self, context):
-        context_widget = ContextWidget(context)
-
         category_item = get_category_item(context)
         if category_item is None:
             return
+
+        context_widget = ContextWidget(context)
 
         # Build collections elements
         items = build_tree_items(category_item.collections)
