@@ -163,8 +163,14 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
         for key, values in self.active_filters.items():
             if not isinstance(values, (list, tuple, set)):
                 values = [values]
-            if tags.get(key) not in values:
+
+            tag_values = tags.get(key)
+            if not isinstance(tag_values, (list, tuple, set)):
+                tag_values = [tag_values] if tag_values is not None else []
+
+            if not any(x in values for x in tag_values):
                 return False
+
         return True
 
 
@@ -293,7 +299,7 @@ class ViewControlsWidget(QtWidgets.QWidget):
 class FilterTag(QtWidgets.QFrame):
     removed = QtCore.Signal(object)
 
-    def __init__(self, key: str, value: str, parent=None):
+    def __init__(self, key: str, value: str | bool, parent=None):
         super().__init__(parent)
         self.key = key
         self.value = value
@@ -301,8 +307,8 @@ class FilterTag(QtWidgets.QFrame):
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
         layout.setSpacing(2)
-
-        self.label = QtWidgets.QLabel(f'{key}:{value}')
+        label = f'{key}:{value}' if isinstance(value, str) else key
+        self.label = QtWidgets.QLabel(label)
         layout.addWidget(self.label)
 
         self.btn_remove = QtWidgets.QPushButton('x')
@@ -357,7 +363,7 @@ class FiltersBar(QtWidgets.QWidget):
         self.layout.addWidget(self.btn_add)
         self.layout.addStretch(1)
 
-    def add_filter(self, key: str, value: str):
+    def add_filter(self, key: str, value: str | bool):
         tag = FilterTag(key, value)
         tag.removed.connect(self.remove_filter)
         self.tags.append(tag)
@@ -374,6 +380,9 @@ class FiltersBar(QtWidgets.QWidget):
         dlg = AddFilterDialog(self)
         if dlg.exec() == QtWidgets.QDialog.Accepted:
             key, value = dlg.get_data()
+            if value == '':  # When value is not defined, label only will be
+                # used.
+                value = True
             if key and value:
                 self.add_filter(key, value)
 

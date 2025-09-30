@@ -6,7 +6,8 @@ from collections.abc import Callable
 class FileItem():
     path: str
     group: str | None = None
-    tags: dict[str, str] | None = None
+    tags: dict[str, str | bool] | None = None  # A tag can be a key: value pair
+    # or just a label (defined by label: True).
 
 
 @dataclass
