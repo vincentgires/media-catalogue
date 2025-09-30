@@ -467,8 +467,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def save_settings(self):
         if self._settings is None:
             return
-        open_categories = [
-            cw.context_name for cw in self.findChildren(ContextWidget)]
+        open_categories = []
+        for cw in self.findChildren(ContextWidget):
+            cur_thumbs_w = (
+                cw.thumbnails_container_widget.current_thumbnails_widget())
+            size = cur_thumbs_w.view_controls.size_slider.value()
+            spacing = cur_thumbs_w.view_controls.spacing_slider.value()
+            tags = cur_thumbs_w.proxy_model.active_filters
+            open_categories.append({
+                'categorie': cw.context_name,
+                'size': size,
+                'spacing': spacing,
+                'filters': tags})
         self._settings.beginGroup('windows')
         self._settings.setValue('categories', open_categories)
         self._settings.endGroup()
@@ -478,10 +488,17 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self._settings.beginGroup('windows')
         if open_categories := self._settings.value('categories'):
-            if isinstance(open_categories, str):
-                self.add_context_tab(open_categories)
-            elif isinstance(open_categories, list):
-                [self.add_context_tab(oc) for oc in open_categories]
+            for data in open_categories:
+                context_tab = self.add_context_tab(data['categorie'])
+                cur_thumbs_w = (
+                    context_tab.widget().thumbnails_container_widget
+                    .current_thumbnails_widget())
+                cur_thumbs_w.view_controls.size_slider.setValue(data['size'])
+                cur_thumbs_w.view_controls.spacing_slider.setValue(
+                    data['spacing'])
+                for k, v in data['filters'].items():
+                    cur_thumbs_w.search_controls.filters.add_filter(
+                        key=k, value=v)
         self._settings.endGroup()
 
 

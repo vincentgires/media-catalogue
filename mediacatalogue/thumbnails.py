@@ -154,7 +154,7 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
         super().__init__(parent)
         self.setDynamicSortFilter(True)
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self.active_filters: dict[str, str] = {}
+        self.active_filters: dict[str, list[str | bool]] = {}
 
     def filterAcceptsRow(self, source_row, source_parent):  # noqa N802
         index = self.sourceModel().index(source_row, 0, source_parent)
@@ -473,7 +473,7 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             available_image_viewer_widgets.append(viewer)
             self.viewer_created.emit(viewer, self.model)
 
-    def on_filters_changed(self, filters: dict[str, list[str]]):
+    def on_filters_changed(self, filters: dict[str, list[str | bool]]):
         self.proxy_model.active_filters = filters
         self.proxy_model.invalidateFilter()
 
