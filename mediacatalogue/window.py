@@ -471,9 +471,12 @@ class MainWindow(QtWidgets.QMainWindow):
         for cw in self.findChildren(ContextWidget):
             cur_thumbs_w = (
                 cw.thumbnails_container_widget.current_thumbnails_widget())
-            size = cur_thumbs_w.view_controls.size_slider.value()
-            spacing = cur_thumbs_w.view_controls.spacing_slider.value()
-            tags = cur_thumbs_w.proxy_model.active_filters
+            if cur_thumbs_w is None:
+                size, spacing, tags = None, None, None
+            else:
+                size = cur_thumbs_w.view_controls.size_slider.value()
+                spacing = cur_thumbs_w.view_controls.spacing_slider.value()
+                tags = cur_thumbs_w.proxy_model.active_filters
             open_categories.append({
                 'categorie': cw.context_name,
                 'size': size,
@@ -493,6 +496,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 cur_thumbs_w = (
                     context_tab.widget().thumbnails_container_widget
                     .current_thumbnails_widget())
+                if cur_thumbs_w is None:
+                    continue
                 cur_thumbs_w.view_controls.size_slider.setValue(data['size'])
                 cur_thumbs_w.view_controls.spacing_slider.setValue(
                     data['spacing'])
