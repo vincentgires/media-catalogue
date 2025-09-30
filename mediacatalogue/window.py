@@ -419,7 +419,7 @@ class MainWindow(QtWidgets.QMainWindow):
         category, result = dialog.getItem(
             self, 'add context', 'category', items, editable=False)
         if result:
-            self.add_context_tab(category)
+            return self.add_context_tab(category)
 
     def add_context_tab(self, context):
         category_item = get_category_item(context)
@@ -496,9 +496,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 cur_thumbs_w.view_controls.size_slider.setValue(data['size'])
                 cur_thumbs_w.view_controls.spacing_slider.setValue(
                     data['spacing'])
-                for k, v in data['filters'].items():
-                    cur_thumbs_w.search_controls.filters.add_filter(
-                        key=k, value=v)
+                for k, values in data['filters'].items():
+                    for v in values:
+                        cur_thumbs_w.search_controls.filters.add_filter(
+                            key=k, value=v)
         self._settings.endGroup()
 
 
