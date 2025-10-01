@@ -338,11 +338,12 @@ def build_tree_items(
 
 
 class ContextDockWidget(QtWidgets.QDockWidget):
-    def __init__(self, name):
+    def __init__(self, name, widget):
         super().__init__()
         self.context_name = name
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
+        self.set_widget(widget)
 
     def set_widget(self, widget):
         QtWidgets.QDockWidget.setWidget(self, widget)
@@ -432,8 +433,7 @@ class MainWindow(QtWidgets.QMainWindow):
         items = build_tree_items(category_item.collections)
         context_widget.collections_widget.model.items = items
 
-        dock_contexttab = ContextDockWidget(context)
-        dock_contexttab.set_widget(context_widget)
+        dock_contexttab = ContextDockWidget(context, widget=context_widget)
 
         self.addDockWidget(
             QtCore.Qt.RightDockWidgetArea,
