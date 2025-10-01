@@ -492,6 +492,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._settings.beginGroup('windows')
         if open_categories := self._settings.value('categories'):
             for data in open_categories:
+                if not isinstance(data, dict):
+                    continue
+                if not data.get('categorie'):
+                    continue
                 context_tab = self.add_context_tab(data['categorie'])
                 cur_thumbs_w = (
                     context_tab.widget().thumbnails_container_widget
