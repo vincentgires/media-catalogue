@@ -267,6 +267,15 @@ class ThumbnailView(QtWidgets.QListView):
                 self.setResizeMode(QtWidgets.QListView.Adjust)
 
 
+def _set_icon(
+        widget: QtWidgets.QPushButton, icon_path: str, label: str | None):
+    if os.path.exists(icon_path):
+        icon = QtGui.QIcon(icon_path)
+        widget.setIcon(icon)
+    elif label is not None:
+        widget.setText(label)
+
+
 class ViewControlsWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -298,39 +307,70 @@ class ViewControlsWidget(QtWidgets.QWidget):
 
 class FilterTag(QtWidgets.QFrame):
     removed = QtCore.Signal(object)
+    updated = QtCore.Signal()
 
-    def __init__(self, key: str, value: str | bool, parent=None):
+    def __init__(self, name: str, value: str | bool, parent=None):
         super().__init__(parent)
-        self.key = key
+        self.name = name
         self.value = value
         self.setFrameShape(QtWidgets.QFrame.Box)
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
-        layout.setSpacing(2)
-        label = f'{key}:{value}' if isinstance(value, str) else key
-        self.label = QtWidgets.QLabel(label)
-        layout.addWidget(self.label)
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.filter_btn = QtWidgets.QPushButton()
+        _set_icon(
+            widget=self.filter_btn,
+            icon_path=os.path.expandvars('$ICONS_PATH/edit.svg'),
+            label=None)
+        self.filter_btn.setFlat(True)
+        self.filter_btn.clicked.connect(self.edit_filter)
+        layout.addWidget(self.filter_btn)
 
-        self.btn_remove = QtWidgets.QPushButton('x')
-        self.btn_remove.setFixedSize(16, 16)
-        self.btn_remove.clicked.connect(self.on_remove)
-        layout.addWidget(self.btn_remove)
+        self.remove_btn = QtWidgets.QPushButton()
+        _set_icon(
+            widget=self.remove_btn,
+            icon_path=os.path.expandvars('$ICONS_PATH/multiply.svg'),
+            label='x')
+        self.remove_btn.clicked.connect(self.on_remove)
+        layout.addWidget(self.remove_btn)
+        self.setLayout(layout)
+
+        self.set_label()
+
+    def set_label(self):
+        label = (
+            f'{self.name}:{self.value}'
+            if isinstance(self.value, str) else self.name)
+        self.filter_btn.setText(label)
 
     def on_remove(self):
         self.removed.emit(self)
 
+    def edit_filter(self):
+        dlg = SetFilterDialog(self)
+        dlg.name_edit.setText(self.name)
+        dlg.value_edit.setText(
+            self.value if isinstance(self.value, str) else '')
+        if dlg.exec() == QtWidgets.QDialog.Accepted:
+            name, value = dlg.get_data()
+            if name and value:
+                self.name = name
+                self.value = value
+                self.set_label()
+                self.updated.emit()
 
-class AddFilterDialog(QtWidgets.QDialog):
+
+class SetFilterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('add filter')
-        self.key_edit = QtWidgets.QLineEdit()
+        self.name_edit = QtWidgets.QLineEdit()
         self.value_edit = QtWidgets.QLineEdit()
         self.ok_btn = QtWidgets.QPushButton('ok')
         self.cancel_btn = QtWidgets.QPushButton('cancel')
 
         layout = QtWidgets.QFormLayout(self)
-        layout.addRow('key', self.key_edit)
+        layout.addRow('name', self.name_edit)
         layout.addRow('value', self.value_edit)
 
         btn_layout = QtWidgets.QHBoxLayout()
@@ -343,7 +383,10 @@ class AddFilterDialog(QtWidgets.QDialog):
         self.cancel_btn.clicked.connect(self.reject)
 
     def get_data(self):
-        return self.key_edit.text(), self.value_edit.text()
+        name, value = self.name_edit.text(), self.value_edit.text()
+        if value == '':  # When value is not defined, label only will be used
+            value = True  # True is the label only flag
+        return name, value
 
 
 class FiltersBar(QtWidgets.QWidget):
@@ -353,21 +396,25 @@ class FiltersBar(QtWidgets.QWidget):
         super().__init__()
         self.tags = []
 
-        self.layout = QtWidgets.QHBoxLayout(self)
-        self.layout.setContentsMargins(*(0,) * 4)
-        self.layout.setSpacing(4)
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(*(0,) * 4)
+        layout.setSpacing(4)
 
-        self.btn_add = QtWidgets.QPushButton('+')
-        self.btn_add.setFixedWidth(24)
-        self.btn_add.clicked.connect(self.add_new_filter)
-        self.layout.addWidget(self.btn_add)
-        self.layout.addStretch(1)
+        self.add_btn = QtWidgets.QPushButton('filters')
+        _set_icon(
+            widget=self.add_btn,
+            icon_path=os.path.expandvars('$ICONS_PATH/add.svg'),
+            label='filters +')
+        self.add_btn.clicked.connect(self.add_new_filter)
+        layout.addWidget(self.add_btn)
+        layout.addStretch(1)
 
-    def add_filter(self, key: str, value: str | bool):
-        tag = FilterTag(key, value)
+    def add_filter(self, name: str, value: str | bool):
+        tag = FilterTag(name, value)
         tag.removed.connect(self.remove_filter)
+        tag.updated.connect(self.emit_filters)
         self.tags.append(tag)
-        self.layout.insertWidget(self.layout.count() - 1, tag)
+        self.layout().insertWidget(self.layout().count() - 1, tag)
         self.emit_filters()
 
     def remove_filter(self, tag: FilterTag):
@@ -377,19 +424,16 @@ class FiltersBar(QtWidgets.QWidget):
         self.emit_filters()
 
     def add_new_filter(self):
-        dlg = AddFilterDialog(self)
+        dlg = SetFilterDialog(self)
         if dlg.exec() == QtWidgets.QDialog.Accepted:
-            key, value = dlg.get_data()
-            if value == '':  # When value is not defined, label only will be
-                # used.
-                value = True
-            if key and value:
-                self.add_filter(key, value)
+            name, value = dlg.get_data()
+            if name and value:
+                self.add_filter(name, value)
 
     def emit_filters(self):
         filters: dict[str, list[str]] = {}
         for tag in self.tags:
-            filters.setdefault(tag.key, []).append(tag.value)
+            filters.setdefault(tag.name, []).append(tag.value)
         self.filters_changed.emit(filters)
 
 
@@ -399,9 +443,7 @@ class SearchInViewControls(QtWidgets.QWidget):
         self.main_layout = QtWidgets.QHBoxLayout()
         self.main_layout.setSizeConstraint(
             QtWidgets.QLayout.SizeConstraint.SetFixedSize)
-        label = QtWidgets.QLabel('filters')
         self.filters = FiltersBar()
-        self.main_layout.addWidget(label)
         self.main_layout.addWidget(self.filters)
         self.setLayout(self.main_layout)
 

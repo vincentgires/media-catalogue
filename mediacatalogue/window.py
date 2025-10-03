@@ -508,7 +508,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 for k, values in data['filters'].items():
                     for v in values:
                         cur_thumbs_w.search_controls.filters.add_filter(
-                            key=k, value=v)
+                            name=k, value=v)
         self._settings.endGroup()
 
 
