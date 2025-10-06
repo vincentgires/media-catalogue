@@ -1,5 +1,5 @@
 import os
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from mediacatalogue.qt import QtCore, QtGui
 try:
     import OpenImageIO as oiio
@@ -12,6 +12,8 @@ except ImportError:
 ext_to_mime = {
     '.hdr': 'image/vnd.radiance',
     '.exr': 'image/x-exr'}
+
+executor = ThreadPoolExecutor(max_workers=4)
 
 
 def get_mime_type_for_file(path: str) -> str:
@@ -117,6 +119,57 @@ class ImageLoader(QtCore.QObject):
         data = hdr_image.tobytes()
         return QtGui.QImage(data, width, height, image_format)
 
-    def load_image(self):
-        thread = threading.Thread(target=self.run)
-        thread.start()
+    def load_async(self, executor):
+        if not self.file_object.is_image:
+            return
+
+        file_path = self.file_object.filePath()
+        file_mime = self.file_object.file_mime
+
+        def task():
+            if file_mime in hdr_mimes and _oiio_available:
+                image = oiio.ImageInput.open(file_path)
+                spec = image.spec()
+                width, height = spec.width, spec.height
+                channels = spec.nchannels
+                pixels = image.read_image()
+                image.close()
+                return ('hdr', (pixels, width, height, channels))
+            else:
+                image_reader = QtGui.QImageReader(file_path)
+                if not self.target_size.isNull():
+                    image_size = image_reader.size()
+                    image_size.scale(
+                        self.target_size, QtCore.Qt.KeepAspectRatio)
+                    image_reader.setScaledSize(image_size)
+                return ('regular', image_reader.read())
+
+        future = executor.submit(task)
+
+        def when_done(future_):
+            kind, data = future_.result()
+            match kind:
+                case 'hdr':
+                    QtCore.QTimer.singleShot(
+                        0, lambda: self._on_hdr_ready(data))
+                case 'regular':
+                    QtCore.QTimer.singleShot(
+                        0, lambda: self._on_regular_ready(data))
+
+        future.add_done_callback(when_done)
+
+    def _on_regular_ready(self, data):
+        qimage = data
+        if not self.target_size.isNull() and not qimage.isNull():
+            qimage = qimage.scaled(
+                self.target_size,
+                QtCore.Qt.KeepAspectRatio,
+                QtCore.Qt.SmoothTransformation)
+        self.image = qimage
+        self.image_loaded.emit(qimage)
+
+    def _on_hdr_ready(self, data):
+        pixels, width, height, channels = data
+        qimage = self.hdr_to_qimage(pixels, width, height, channels)
+        self.image = qimage
+        self.image_loaded.emit(qimage)

@@ -4,6 +4,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from mediacatalogue.qt import QtWidgets, QtCore, QtGui
 from mediacatalogue.image import FileObject, ImageLoader
+from mediacatalogue.image import executor as image_executor
 from mediacatalogue.imageviewer import (
     available_image_viewer_widgets, ImageViewerWidget)
 
@@ -23,18 +24,28 @@ class ThumbnailItem(QtGui.QStandardItem):
         self.thumbnail_image.image_loaded.connect(
             self.emitDataChanged, QtCore.Qt.QueuedConnection)
         self.tags: dict[str, str] = {}
+
         item_background_brush = QtGui.QBrush(QtCore.Qt.Dense6Pattern)
         item_font = QtGui.QFont()
         self.setEditable(False)
         self.setBackground(item_background_brush)
         self.setFont(item_font)
 
+        self.placeholder = QtGui.QPixmap(64, 64)
+        self.placeholder.fill(QtGui.QColor('lightgray'))
+        self.thumbnail_image.image = self.placeholder
+        self.emitDataChanged()
+
+    def lazy_load(self):
+        self.thumbnail_image.run()
+        self.emitDataChanged()
+
     @property
     def file_path(self):
         return self.thumbnail_image.file_object.filePath()
 
     def refresh(self):
-        self.thumbnail_image.run()
+        self.thumbnail_image.load_async(image_executor)
         self.emitDataChanged()
 
     def data(self, role):
@@ -91,7 +102,10 @@ class ThumbnailItemDelegate(QtWidgets.QStyledItemDelegate):
 
             image_rect.moveCenter(option.rect.center())
 
-            painter.drawImage(image_rect, item_image)
+            if isinstance(item_image, QtGui.QPixmap):
+                painter.drawPixmap(image_rect, item_image)
+            else:
+                painter.drawImage(image_rect, item_image)
             painter.restore()
 
         if self.always_show_header_text or (
@@ -454,6 +468,8 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self._load_queue = []
+        self._batch_size = 10
 
         self.view = ThumbnailView(self)
         self.model = ThumbnailItemModel(self)
@@ -499,6 +515,17 @@ class ThumbnailsWidget(QtWidgets.QWidget):
         item.setSizeHint(self.view.iconSize())
         self.model.appendRow(item)
         self.item_added.emit(item)
+
+        self._load_queue.append(item)
+        if len(self._load_queue) == 1:
+            QtCore.QTimer.singleShot(0, self._load_next_batch)
+
+    def _load_next_batch(self):
+        for _ in range(min(self._batch_size, len(self._load_queue))):
+            item = self._load_queue.pop(0)
+            item.lazy_load()
+        if self._load_queue:
+            QtCore.QTimer.singleShot(0, self._load_next_batch)
 
     def remove_collection_items(self, item_path=None, collection_item=None):
         items = _get_items_from_model(self.model)
