@@ -31,8 +31,8 @@ class ThumbnailItem(QtGui.QStandardItem):
         self.setBackground(item_background_brush)
         self.setFont(item_font)
 
-        self.placeholder = QtGui.QPixmap(64, 64)
-        self.placeholder.fill(QtGui.QColor('lightgray'))
+        self.placeholder = QtGui.QPixmap(*default_item_size)
+        self.placeholder.fill(QtGui.QColor('black'))
         self.thumbnail_image.image = self.placeholder
         self.emitDataChanged()
 
