@@ -61,6 +61,8 @@ class FileObject(QtCore.QFileInfo):
 
 class ImageLoader(QtCore.QObject):
     image_loaded = QtCore.Signal(QtGui.QImage)
+    _hdr_ready = QtCore.Signal(object)
+    _regular_ready = QtCore.Signal(object)
 
     def __init__(self, file=None):
         super().__init__()
@@ -68,6 +70,9 @@ class ImageLoader(QtCore.QObject):
             file if isinstance(file, FileObject) else FileObject(file))
         self.image = QtGui.QImage()
         self.target_size = QtCore.QSize(0, 0)
+
+        self._hdr_ready.connect(self._on_hdr_ready)
+        self._regular_ready.connect(self._on_regular_ready)
 
     def set_scaled_size(self, size):
         self.target_size = size
@@ -150,11 +155,9 @@ class ImageLoader(QtCore.QObject):
             kind, data = future_.result()
             match kind:
                 case 'hdr':
-                    QtCore.QTimer.singleShot(
-                        0, lambda: self._on_hdr_ready(data))
+                    self._hdr_ready.emit(data)
                 case 'regular':
-                    QtCore.QTimer.singleShot(
-                        0, lambda: self._on_regular_ready(data))
+                    self._regular_ready.emit(data)
 
         future.add_done_callback(when_done)
 
