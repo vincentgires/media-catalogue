@@ -40,15 +40,14 @@ class ThumbnailItem(QtGui.QStandardItem):
     def file_path(self):
         return self.thumbnail_image.file_object.filePath()
 
-    def lazy_load(self):
+    def load(self):
         if not shiboken.isValid(self):
             return
         self.thumbnail_image.run()
         self.emitDataChanged()
 
     def refresh(self):
-        self.thumbnail_image.load_async(image_executor)
-        self.emitDataChanged()
+        self.load()
 
     def data(self, role):
         match role:
@@ -502,12 +501,6 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
         self.setLayout(self.main_layout)
 
-        self.item_added.connect(
-            self.send_item_to_thread_pool, QtCore.Qt.AutoConnection)
-
-    def send_item_to_thread_pool(self, item):
-        _thread_pool_executor.submit(_process_item, item)
-
     def add_collection_item(self, path, tags=None, collection_item=None):
         item = ThumbnailItem(path)
         item.tags = tags
@@ -525,7 +518,7 @@ class ThumbnailsWidget(QtWidgets.QWidget):
     def _load_next_batch(self):
         for _ in range(min(self._batch_size, len(self._load_queue))):
             item = self._load_queue.pop(0)
-            item.lazy_load()
+            item.load()
         if self._load_queue:
             QtCore.QTimer.singleShot(0, self._load_next_batch)
 
