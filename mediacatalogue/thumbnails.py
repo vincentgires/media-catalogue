@@ -4,7 +4,6 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from mediacatalogue.qt import QtWidgets, QtCore, QtGui, shiboken
 from mediacatalogue.image import FileObject, ImageLoader
-from mediacatalogue.image import executor as image_executor
 from mediacatalogue.imageviewer import (
     available_image_viewer_widgets, ImageViewerWidget)
 
