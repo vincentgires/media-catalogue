@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from mediacatalogue.qt import QtWidgets, QtCore, QtGui
+from mediacatalogue.qt import QtWidgets, QtCore, QtGui, shiboken
 from mediacatalogue.image import FileObject, ImageLoader
 from mediacatalogue.image import executor as image_executor
 from mediacatalogue.imageviewer import (
@@ -36,13 +36,15 @@ class ThumbnailItem(QtGui.QStandardItem):
         self.thumbnail_image.image = self.placeholder
         self.emitDataChanged()
 
-    def lazy_load(self):
-        self.thumbnail_image.run()
-        self.emitDataChanged()
-
     @property
     def file_path(self):
         return self.thumbnail_image.file_object.filePath()
+
+    def lazy_load(self):
+        if not shiboken.isValid(self):
+            return
+        self.thumbnail_image.run()
+        self.emitDataChanged()
 
     def refresh(self):
         self.thumbnail_image.load_async(image_executor)

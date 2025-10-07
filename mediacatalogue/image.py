@@ -1,6 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
-from mediacatalogue.qt import QtCore, QtGui
+from mediacatalogue.qt import QtCore, QtGui, shiboken
 try:
     import OpenImageIO as oiio
     _oiio_available = True
