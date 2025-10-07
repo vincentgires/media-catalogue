@@ -1,6 +1,6 @@
 import os
 from functools import partial
-from mediacatalogue.qt import QtCore, QtWidgets, QtGui
+from mediacatalogue.qt import QtCore, QtWidgets, QtGui, shiboken
 from mediacatalogue.categories import (
     get_categories_by_family, get_category_item,
     CollectionItem as CollectionItemData)
@@ -439,9 +439,9 @@ class MainWindow(QtWidgets.QMainWindow):
             QtCore.Qt.RightDockWidgetArea,
             dock_contexttab, QtCore.Qt.Horizontal)
 
-        if self.previous_tabbed_dock is not None:
-            self.tabifyDockWidget(
-                self.previous_tabbed_dock, dock_contexttab)
+        if (self.previous_tabbed_dock is not None
+                and shiboken.isValid(self.previous_tabbed_dock)):
+            self.tabifyDockWidget(self.previous_tabbed_dock, dock_contexttab)
         self.previous_tabbed_dock = dock_contexttab
 
         dock_contexttab.show()
