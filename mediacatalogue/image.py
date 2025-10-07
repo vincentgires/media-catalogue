@@ -1,5 +1,4 @@
 import os
-import threading
 from mediacatalogue.qt import QtCore, QtGui
 try:
     import OpenImageIO as oiio
@@ -116,7 +115,3 @@ class ImageLoader(QtCore.QObject):
             raise ValueError('Unknown channels')
         data = hdr_image.tobytes()
         return QtGui.QImage(data, width, height, image_format)
-
-    def load_image(self):
-        thread = threading.Thread(target=self.run)
-        thread.start()
