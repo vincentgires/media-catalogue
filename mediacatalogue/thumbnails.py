@@ -468,8 +468,8 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self._load_queue = []
-        self._batch_size = 10
+        self._pending_items = []
+        self._is_loading = False
 
         self.view = ThumbnailView(self)
         self.model = ThumbnailItemModel(self)
@@ -510,16 +510,18 @@ class ThumbnailsWidget(QtWidgets.QWidget):
         self.model.appendRow(item)
         self.item_added.emit(item)
 
-        self._load_queue.append(item)
-        if len(self._load_queue) == 1:
-            QtCore.QTimer.singleShot(0, self._load_next_batch)
+        self._pending_items.append(item)
+        if not self._is_loading:
+            self._is_loading = True
+            self._load_next_item()
 
-    def _load_next_batch(self):
-        for _ in range(min(self._batch_size, len(self._load_queue))):
-            item = self._load_queue.pop(0)
-            item.load()
-        if self._load_queue:
-            QtCore.QTimer.singleShot(0, self._load_next_batch)
+    def _load_next_item(self):
+        if not self._pending_items:
+            self._is_loading = False
+            return
+        item = self._pending_items.pop(0)
+        item.load()
+        QtCore.QTimer.singleShot(0, self._load_next_item)
 
     def remove_collection_items(self, item_path=None, collection_item=None):
         items = _get_items_from_model(self.model)
