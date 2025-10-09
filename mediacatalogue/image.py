@@ -107,7 +107,9 @@ class ImageLoader(QtCore.QObject):
     def hdr_to_qimage(self, hdr_image, width, height, channels):
         hdr_image = hdr_image.clip(0, 1)
         hdr_image = (hdr_image * 255).astype('uint8')
-        if channels == 3:  # RGB
+        if channels == 1:  # Value
+            image_format = QtGui.QImage.Format_Grayscale8
+        elif channels == 3:  # RGB
             image_format = QtGui.QImage.Format_RGB888
         elif channels == 4:  # RGBA
             image_format = QtGui.QImage.Format_RGBA8888
