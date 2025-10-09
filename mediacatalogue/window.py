@@ -337,12 +337,26 @@ def build_tree_items(
     return items
 
 
+class ContextDockTitleBarWidget(QtWidgets.QWidget):
+    def __init__(self, title):
+        super().__init__()
+        self.title = QtWidgets.QLabel()
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.title)
+        self.setLayout(layout)
+        self.set_title(title)
+
+    def set_title(self, name):
+        self.title.setText(name)
+
+
 class ContextDockWidget(QtWidgets.QDockWidget):
     def __init__(self, name, widget):
         super().__init__()
         self.context_name = name
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
+        self.setTitleBarWidget(ContextDockTitleBarWidget(title=name))
         self.set_widget(widget)
 
     def set_widget(self, widget):
