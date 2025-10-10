@@ -87,7 +87,12 @@ class ImageLoader(QtCore.QObject):
         spec = image.spec()
         width, height = spec.width, spec.height
         channels = spec.nchannels
-        pixels = image.read_image()
+        if not spec.deep:
+            pixels = image.read_image()
+        else:
+            deep_buf = oiio.ImageBuf(file_path)
+            pixels_buf = oiio.ImageBufAlgo.flatten(deep_buf)
+            pixels = pixels_buf.get_pixels(oiio.FLOAT)
         image.close()
         # TODO: resize
         # if not self.target_size.isNull():
@@ -104,9 +109,7 @@ class ImageLoader(QtCore.QObject):
         self.image = image_reader.read()
         self.image_loaded.emit(self.image)
 
-    def hdr_to_qimage(self, hdr_image, width, height, channels):
-        hdr_image = hdr_image.clip(0, 1)
-        hdr_image = (hdr_image * 255).astype('uint8')
+    def hdr_to_qimage(self, pixels, width, height, channels):
         if channels == 1:  # Value
             image_format = QtGui.QImage.Format_Grayscale8
         elif channels == 3:  # RGB
@@ -114,6 +117,9 @@ class ImageLoader(QtCore.QObject):
         elif channels == 4:  # RGBA
             image_format = QtGui.QImage.Format_RGBA8888
         else:
-            raise ValueError('Unknown channels')
-        data = hdr_image.tobytes()
+            pixels = pixels[:, :, :3]  # Fallback: keep three first channels
+            image_format = QtGui.QImage.Format_RGB888
+        pixels = pixels.clip(0, 1)
+        pixels = (pixels * 255).astype('uint8')
+        data = pixels.tobytes()
         return QtGui.QImage(data, width, height, image_format)
