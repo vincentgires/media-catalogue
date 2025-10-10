@@ -511,6 +511,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 if not data.get('categorie'):
                     continue
                 context_tab = self.add_context_tab(data['categorie'])
+                if context_tab is None:
+                    continue
                 cur_thumbs_w = (
                     context_tab.widget().thumbnails_container_widget
                     .current_thumbnails_widget())
