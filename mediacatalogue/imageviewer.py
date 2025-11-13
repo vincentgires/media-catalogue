@@ -265,4 +265,4 @@ if __name__ == '__main__':
     viewer = ImageViewerWidget()
     viewer.set_image_file_path(os.path.expanduser('~/imagetest.png'))
     viewer.show()
-    app.exec_()
+    app.exec()

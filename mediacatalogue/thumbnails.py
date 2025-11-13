@@ -639,7 +639,7 @@ def run_standalone(files=None):
     for image in images:
         widget.add_collection_item(image)
     widget.show()
-    app.exec_()
+    app.exec()
 
 
 if __name__ == '__main__':
