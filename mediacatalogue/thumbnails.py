@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+from typing import Literal
 from concurrent.futures import ThreadPoolExecutor
 from mediacatalogue.qt import QtWidgets, QtCore, QtGui, shiboken
 from mediacatalogue.image import FileObject, ImageLoader
@@ -169,23 +170,29 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
         self.setDynamicSortFilter(True)
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
         self.active_filters: dict[str, list[str | bool]] = {}
+        self.filter_mode: Literal['all', 'any'] = 'all'
 
     def filterAcceptsRow(self, source_row, source_parent):  # noqa N802
+        if not self.active_filters:
+            return True  # No active filter: show everything
+
         index = self.sourceModel().index(source_row, 0, source_parent)
         item = self.sourceModel().itemFromIndex(index)
         tags = item.tags or {}
-        for key, values in self.active_filters.items():
-            if not isinstance(values, (list, tuple, set)):
-                values = [values]
 
-            tag_values = tags.get(key)
+        matches = []
+        for key, filter_values in self.active_filters.items():
+            if not isinstance(filter_values, (list, tuple, set)):
+                filter_values = [filter_values]
+            tag_values = tags.get(key, None)
             if not isinstance(tag_values, (list, tuple, set)):
-                tag_values = [tag_values] if tag_values is not None else []
+                tag_values = [tag_values]
+            if self.filter_mode == 'all':
+                matches.append(all(x in tag_values for x in filter_values))
+            else:
+                matches.append(any(x in tag_values for x in filter_values))
 
-            if not any(x in values for x in tag_values):
-                return False
-
-        return True
+        return all(matches) if self.filter_mode == 'all' else any(matches)
 
 
 class ThumbnailView(QtWidgets.QListView):
@@ -404,24 +411,35 @@ class SetFilterDialog(QtWidgets.QDialog):
 
 
 class FiltersBar(QtWidgets.QWidget):
-    filters_changed = QtCore.Signal(dict)
+    filters_changed = QtCore.Signal(dict, str)
 
     def __init__(self):
         super().__init__()
         self.tags = []
 
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(*(0,) * 4)
-        layout.setSpacing(4)
+        all_radio = QtWidgets.QRadioButton('all')
+        any_radio = QtWidgets.QRadioButton('any')
+        all_radio.setChecked(True)
+        self.mode_group = QtWidgets.QButtonGroup(self)
+        self.mode_group.addButton(all_radio)
+        self.mode_group.addButton(any_radio)
 
         self.add_btn = QtWidgets.QPushButton('filters')
         _set_icon(
             widget=self.add_btn,
             icon_path=os.path.expandvars('$ICONS_PATH/add.svg'),
             label='filters +')
+
         self.add_btn.clicked.connect(self.add_new_filter)
+        self.mode_group.buttonClicked.connect(self.emit_filters)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(*(0,) * 4)
+        layout.setSpacing(4)
+        layout.addWidget(QtWidgets.QLabel('match mode'))
+        layout.addWidget(all_radio)
+        layout.addWidget(any_radio)
         layout.addWidget(self.add_btn)
-        layout.addStretch(1)
 
     def add_filter(self, name: str, value: str | bool):
         tag = FilterTag(name, value)
@@ -448,7 +466,9 @@ class FiltersBar(QtWidgets.QWidget):
         filters: dict[str, list[str]] = {}
         for tag in self.tags:
             filters.setdefault(tag.name, []).append(tag.value)
-        self.filters_changed.emit(filters)
+        selected_button = self.mode_group.checkedButton()
+        selected_mode = selected_button.text()
+        self.filters_changed.emit(filters, selected_mode)
 
 
 class SearchInViewControls(QtWidgets.QWidget):
@@ -460,6 +480,19 @@ class SearchInViewControls(QtWidgets.QWidget):
         self.filters = FiltersBar()
         self.main_layout.addWidget(self.filters)
         self.setLayout(self.main_layout)
+
+
+class PropertyPanel(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QtWidgets.QVBoxLayout(self)
+        self.label = QtWidgets.QLabel('No selection')
+        layout.addWidget(self.label)
+        layout.addStretch()
+
+    def set_item(self, item):
+        import json
+        self.label.setText(f'<pre>{json.dumps(item.tags, indent=2)}</pre>')
 
 
 class ThumbnailsWidget(QtWidgets.QWidget):
@@ -480,6 +513,8 @@ class ThumbnailsWidget(QtWidgets.QWidget):
         self.view_controls = ViewControlsWidget(self)
         self.search_controls = SearchInViewControls(self)
 
+        self.property_panel = PropertyPanel(self)
+
         self.view_controls.size_slider.valueChanged.connect(
             self.view.on_size_change, QtCore.Qt.QueuedConnection)
         self.view_controls.size_slider.sliderReleased.connect(
@@ -490,15 +525,22 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             self.on_filters_changed)
 
         self.view.view_item.connect(self.on_thumbnail_double_clicked)
+        self.view.item_clicked.connect(self.on_thumbnail_clicked)
 
-        self.main_layout = QtWidgets.QVBoxLayout()
-        self.main_layout.addWidget(self.view)
+        self.set_layout()
+
+    def set_layout(self):
+        main_layout = QtWidgets.QVBoxLayout()
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter.addWidget(self.view)
+        splitter.addWidget(self.property_panel)
+        splitter.setSizes([1, 0])  # Hide self.property_panel by default
+        main_layout.addWidget(splitter)
         controls_layout = QtWidgets.QHBoxLayout()
         controls_layout.addWidget(self.view_controls)
         controls_layout.addWidget(self.search_controls)
-        self.main_layout.addLayout(controls_layout)
-
-        self.setLayout(self.main_layout)
+        main_layout.addLayout(controls_layout)
+        self.setLayout(main_layout)
 
     def add_collection_item(self, path, tags=None, collection_item=None):
         item = ThumbnailItem(path)
@@ -538,8 +580,13 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             available_image_viewer_widgets.append(viewer)
             self.viewer_created.emit(viewer, self.model)
 
-    def on_filters_changed(self, filters: dict[str, list[str | bool]]):
+    def on_thumbnail_clicked(self, item):
+        self.property_panel.set_item(item)
+
+    def on_filters_changed(
+            self, filters: dict[str, list[str | bool]], mode: str):
         self.proxy_model.active_filters = filters
+        self.proxy_model.filter_mode = mode
         self.proxy_model.invalidateFilter()
 
 
