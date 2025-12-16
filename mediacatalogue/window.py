@@ -254,6 +254,18 @@ class ContextWidget(QtWidgets.QWidget):
                 last=True,
                 thumbnail_item_model=thumbnail_item_model,
                 image_viewer_widget=x))
+        image_viewer_widget.switch.connect(
+            lambda widget, backward: self.switch_item(widget, backward))
+
+    def switch_item(self, image_viewer_widget, backward):
+        category_item = get_category_item(self.context_name)
+        if category_item is None:
+            return
+        if switch_call := category_item.switch:
+            switch_call(
+                image_viewer_widget=image_viewer_widget,
+                backward=backward,
+                tags=image_viewer_widget.tags)
 
     def _fill_history(self, image_viewer_widget):
         category_item = get_category_item(self.context_name)

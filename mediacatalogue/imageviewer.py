@@ -103,15 +103,32 @@ class HistoryWidget(QtWidgets.QWidget):
             self.history_listwidget.setFocus()
 
 
+class PropertyPanel(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QtWidgets.QVBoxLayout(self)
+        self.tags = QtWidgets.QLabel()
+        layout.addWidget(self.tags)
+        layout.addStretch()
+
+    def set_tags(self, tags: dict | None = None):
+        import json
+        tags_string = (
+            '' if tags is None else f'<pre>{json.dumps(tags, indent=2)}</pre>')
+        self.tags.setText(tags_string)
+
+
 class ImageViewerWidget(QtWidgets.QWidget):
     history_show = QtCore.Signal(object)
     next_image = QtCore.Signal(object)
     previous_image = QtCore.Signal(object)
     first_image = QtCore.Signal(object)
     last_image = QtCore.Signal(object)
+    switch = QtCore.Signal(object, bool)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self.tags = None
         self.image_loader = ImageLoader()
         self.image_loader.image_loaded.connect(self.set_pixmap)
         self.resize(QtCore.QSize(*image_viewer_default_size))
@@ -123,6 +140,7 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.history_widget.setVisible(False)
         self.history_widget.file_changed.connect(
             self.set_history_image_file_path)
+        self.property_panel = PropertyPanel(self)
 
         self.image_item = QtWidgets.QGraphicsPixmapItem()
         self.image_item.setPixmap(self.image_pixmap)
@@ -137,11 +155,13 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.file_entry = QtWidgets.QLineEdit()
         self.file_entry.returnPressed.connect(self.on_update_file_path)
 
-        viewer_main_splitter = QtWidgets.QSplitter()
-        viewer_main_splitter.addWidget(self.history_widget)
-        viewer_main_splitter.addWidget(self.image_view)
+        main_splitter = QtWidgets.QSplitter()
+        main_splitter.addWidget(self.history_widget)
+        main_splitter.addWidget(self.image_view)
+        main_splitter.addWidget(self.property_panel)
+        main_splitter.setSizes([0, 1, 0])
 
-        self.main_layout.addWidget(viewer_main_splitter)
+        self.main_layout.addWidget(main_splitter)
         self.main_layout.addWidget(self.file_entry)
         self.setLayout(self.main_layout)
 
@@ -199,6 +219,15 @@ class ImageViewerWidget(QtWidgets.QWidget):
             case QtCore.Qt.Key_F10:
                 self.toggle_frameless_mode()
 
+            case QtCore.Qt.Key_PageUp:
+                self._emit_switch(backward=False)
+
+            case QtCore.Qt.Key_PageDown:
+                self._emit_switch(backward=True)
+
+    def _emit_switch(self, backward=False):
+        self.switch.emit(self, backward)
+
     def closeEvent(self, event):  # noqa N802
         if self in available_image_viewer_widgets:
             available_image_viewer_widgets.remove(self)
@@ -207,6 +236,10 @@ class ImageViewerWidget(QtWidgets.QWidget):
     def showEvent(self, event):  # noqa N802
         QtWidgets.QWidget.showEvent(self, event)
         self.load_image()
+        self.update_property_panel()
+
+    def update_property_panel(self):
+        self.property_panel.set_tags(self.tags)
 
     def load_image(self):
         self.image_loader.set_scaled_size(QtCore.QSize())

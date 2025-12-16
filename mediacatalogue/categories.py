@@ -44,8 +44,7 @@ class CollectionItem():
 class CategoryItem:
     name: str
     family: str
-    next: str
-    previous: str
+    switch: Callable
     find_history: Callable
     collections: list[CollectionItem]
     expand_group: bool = False
