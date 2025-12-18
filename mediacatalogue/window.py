@@ -600,6 +600,8 @@ class ShortcutsWidget(QtWidgets.QWidget):
         formlayout.addRow('last image', QtWidgets.QLabel('[end]'))
         formlayout.addRow('toggle history', QtWidgets.QLabel('[h]'))
         formlayout.addRow('toggle frameless', QtWidgets.QLabel('[f10]'))
+        formlayout.addRow('switch', QtWidgets.QLabel('[pageup]'))
+        formlayout.addRow('switch (backward)', QtWidgets.QLabel('[pagedown]'))
         imageviewer_groupbox.setLayout(formlayout)
 
         mainlayout = QtWidgets.QVBoxLayout()
