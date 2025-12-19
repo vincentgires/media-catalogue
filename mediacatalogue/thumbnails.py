@@ -576,7 +576,7 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             viewer = ImageViewerWidget()
             viewer.set_image_file_path(
                 item.thumbnail_image.file_object.filePath())
-            viewer.tags = item.tags
+            viewer.set_tags(item.tags)
             viewer.show()
             available_image_viewer_widgets.append(viewer)
             self.viewer_created.emit(viewer, self.model)

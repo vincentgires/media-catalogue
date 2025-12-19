@@ -125,6 +125,7 @@ class ImageViewerWidget(QtWidgets.QWidget):
     first_image = QtCore.Signal(object)
     last_image = QtCore.Signal(object)
     switch = QtCore.Signal(object, bool)
+    tags_changed = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -237,6 +238,11 @@ class ImageViewerWidget(QtWidgets.QWidget):
         QtWidgets.QWidget.showEvent(self, event)
         self.load_image()
         self.update_property_panel()
+
+    def set_tags(self, tags):
+        self.tags = tags
+        self.update_property_panel()
+        self.tags_changed.emit(tags)
 
     def update_property_panel(self):
         self.property_panel.set_tags(self.tags)
