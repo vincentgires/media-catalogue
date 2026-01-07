@@ -113,9 +113,18 @@ class PropertyPanel(QtWidgets.QWidget):
         layout.addStretch()
 
     def set_tags(self, tags: dict | None = None):
-        import json
-        tags_string = (
-            '' if tags is None else f'<pre>{json.dumps(tags, indent=2)}</pre>')
+        def format_value(v):
+            if isinstance(v, (list, tuple, set)):
+                return ', '.join(map(str, v))
+            return str(v)
+
+        if tags is None:
+            tags_string = ''
+        else:
+            lines = [
+                f'{k}: {format_value(v)}'
+                for k, v in tags.items()]
+            tags_string = '<pre>' + '\n'.join(lines) + '</pre>'
         self.tags.setText(tags_string)
 
 

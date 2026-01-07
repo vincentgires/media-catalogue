@@ -491,8 +491,19 @@ class PropertyPanel(QtWidgets.QWidget):
         layout.addStretch()
 
     def set_item(self, item):
-        import json
-        self.label.setText(f'<pre>{json.dumps(item.tags, indent=2)}</pre>')
+        def format_value(v):
+            if isinstance(v, (list, tuple, set)):
+                return ', '.join(map(str, v))
+            return str(v)
+
+        if item.tags is None:
+            label = ''
+        else:
+            lines = [
+                f'{k}: {format_value(v)}'
+                for k, v in item.tags.items()]
+            label = '<pre>' + '\n'.join(lines) + '</pre>'
+        self.label.setText(label)
 
 
 class ThumbnailsWidget(QtWidgets.QWidget):
