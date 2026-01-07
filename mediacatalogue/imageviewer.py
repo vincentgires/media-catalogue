@@ -6,6 +6,7 @@ image_viewer_default_size = (800, 500)
 history_widget_width = None
 scale_factor = 1.25
 available_image_viewer_widgets = []
+tag_changed_callbacks: list = []
 
 
 class ImageView(QtWidgets.QGraphicsView):
@@ -242,6 +243,8 @@ class ImageViewerWidget(QtWidgets.QWidget):
     def set_tags(self, tags):
         self.tags = tags
         self.update_property_panel()
+        for callback in tag_changed_callbacks:
+            callback(self)
         self.tags_changed.emit(tags)
 
     def update_property_panel(self):
