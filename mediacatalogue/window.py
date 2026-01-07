@@ -266,6 +266,7 @@ class ContextWidget(QtWidgets.QWidget):
                 image_viewer_widget=image_viewer_widget,
                 backward=backward,
                 tags=image_viewer_widget.tags)
+            image_viewer_widget.set_tags(image_viewer_widget.tags)
 
     def _fill_history(self, image_viewer_widget):
         category_item = get_category_item(self.context_name)
@@ -310,6 +311,7 @@ class ContextWidget(QtWidgets.QWidget):
         iter_indexes = (
             iter(reversed(view_indexes)) if backward else iter(view_indexes))
         next_match = view_indexes[0] if backward else view_indexes[-1]
+        next_item = thumbnail_item_model.itemFromIndex(next_match)
 
         if all(not x for x in (first, last)):
             next_index = (
@@ -327,6 +329,8 @@ class ContextWidget(QtWidgets.QWidget):
             filepath = next_index.data(QtCore.Qt.DisplayRole)
             image_viewer_widget.set_image_file_path(filepath)
             image_viewer_widget.load_image()
+            image_viewer_widget.set_tags(next_item.tags)  # Set tags from
+            # thumbnail item
 
         if image_viewer_widget.is_history_mode:
             self._fill_history(image_viewer_widget)
