@@ -311,7 +311,7 @@ class ViewControlsWidget(QtWidgets.QWidget):
         self.size_slider.setMaximum(300)
 
         self.spacing_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.spacing_slider.setMinimum(1)
+        self.spacing_slider.setMinimum(0)
         self.spacing_slider.setMaximum(100)
         self.spacing_slider.setValue(5)
 
