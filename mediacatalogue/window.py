@@ -234,7 +234,6 @@ class ContextWidget(QtWidgets.QWidget):
             expand_group=category.expand_group)
 
     def on_viewer_created(self, image_viewer_widget, thumbnail_item_model):
-        image_viewer_widget.history_show.connect(self.on_history_show)
         image_viewer_widget.previous_image.connect(
             lambda x: self.show_next_item_from_view(
                 backward=True,
@@ -256,6 +255,7 @@ class ContextWidget(QtWidgets.QWidget):
                 image_viewer_widget=x))
         image_viewer_widget.switch.connect(
             lambda widget, backward: self.switch_item(widget, backward))
+        self._fill_history(image_viewer_widget)
 
     def switch_item(self, image_viewer_widget, backward):
         category_item = get_category_item(self.context_name)
@@ -280,9 +280,6 @@ class ContextWidget(QtWidgets.QWidget):
         history_widget.fill(history_files)
         if history_files:
             history_widget.history_listwidget.setCurrentRow(0)
-
-    def on_history_show(self, image_viewer_widget):
-        self._fill_history(image_viewer_widget)
 
     def show_next_item_from_view(
             self, backward=False, first=False, last=False,
@@ -332,8 +329,7 @@ class ContextWidget(QtWidgets.QWidget):
             image_viewer_widget.set_tags(next_item.tags)  # Set tags from
             # thumbnail item
 
-        if image_viewer_widget.is_history_mode:
-            self._fill_history(image_viewer_widget)
+        self._fill_history(image_viewer_widget)
 
 
 def build_tree_items(
@@ -602,7 +598,6 @@ class ShortcutsWidget(QtWidgets.QWidget):
         formlayout.addRow('previous image', QtWidgets.QLabel('[left]'))
         formlayout.addRow('first image', QtWidgets.QLabel('[home]'))
         formlayout.addRow('last image', QtWidgets.QLabel('[end]'))
-        formlayout.addRow('toggle history', QtWidgets.QLabel('[h]'))
         formlayout.addRow('toggle frameless', QtWidgets.QLabel('[f10]'))
         formlayout.addRow('switch', QtWidgets.QLabel('[pageup]'))
         formlayout.addRow('switch (backward)', QtWidgets.QLabel('[pagedown]'))

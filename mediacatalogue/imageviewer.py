@@ -98,11 +98,6 @@ class HistoryWidget(QtWidgets.QWidget):
         self.initial_fileobject = fileobject
         self.initial_filepath = fileobject.filePath()
 
-    def toggle_visibility(self):
-        self.setVisible(not self.isVisible())
-        if self.isVisible():
-            self.history_listwidget.setFocus()
-
 
 class PropertyPanel(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -129,7 +124,6 @@ class PropertyPanel(QtWidgets.QWidget):
 
 
 class ImageViewerWidget(QtWidgets.QWidget):
-    history_show = QtCore.Signal(object)
     next_image = QtCore.Signal(object)
     previous_image = QtCore.Signal(object)
     first_image = QtCore.Signal(object)
@@ -148,7 +142,6 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.image_pixmap = QtGui.QPixmap()
         self.image_view = ImageView(self)
         self.history_widget = HistoryWidget(self.image_view)
-        self.history_widget.setVisible(False)
         self.history_widget.file_changed.connect(
             self.set_history_image_file_path)
         self.property_panel = PropertyPanel(self)
@@ -176,9 +169,6 @@ class ImageViewerWidget(QtWidgets.QWidget):
         self.main_layout.addWidget(self.file_entry)
         self.setLayout(self.main_layout)
 
-    @property
-    def is_history_mode(self):
-        return self.history_widget.isVisible()
 
     def keyPressEvent(self, event):  # noqa N802
         match event.key():
@@ -215,16 +205,6 @@ class ImageViewerWidget(QtWidgets.QWidget):
 
             case QtCore.Qt.Key_End:
                 self.last_image.emit(self)
-
-            # History widget
-            case QtCore.Qt.Key_H:
-                self.history_widget.toggle_visibility()
-                if self.history_widget.isVisible():
-                    self.history_show.emit(self)
-                if not self.history_widget.isVisible():
-                    orig_file = self.history_widget.initial_filepath
-                    self.set_image_file_path(orig_file)
-                    self.set_image_widget()
 
             # Frameless
             case QtCore.Qt.Key_F10:
