@@ -40,6 +40,7 @@ class CollectionItem():
             grouped.setdefault(f.group, []).append(f)
         return grouped
 
+
 @dataclass
 class CategoryItem:
     name: str

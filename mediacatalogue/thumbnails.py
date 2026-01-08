@@ -334,7 +334,8 @@ class FilterTag(QtWidgets.QFrame):
         super().__init__(parent)
         self.name = name
         self.value = value
-        self.setFrameShape(QtWidgets.QFrame.Box)
+        self.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.setFrameShadow(QtWidgets.QFrame.Plain)
         layout = QtWidgets.QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -343,7 +344,6 @@ class FilterTag(QtWidgets.QFrame):
             widget=self.filter_btn,
             icon_path=os.path.expandvars('$ICONS_PATH/edit.svg'),
             label=None)
-        self.filter_btn.setFlat(True)
         self.filter_btn.clicked.connect(self.edit_filter)
         layout.addWidget(self.filter_btn)
 
