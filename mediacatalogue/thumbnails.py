@@ -329,6 +329,7 @@ class ViewControlsWidget(QtWidgets.QWidget):
 class FilterTag(QtWidgets.QFrame):
     removed = QtCore.Signal(object)
     updated = QtCore.Signal()
+    values_requested = QtCore.Signal(object)
 
     def __init__(self, name: str, value: str | bool, parent=None):
         super().__init__(parent)
@@ -345,6 +346,14 @@ class FilterTag(QtWidgets.QFrame):
         self.filter_btn.clicked.connect(self.edit_filter)
         layout.addWidget(self.filter_btn)
 
+        self.set_value_btn = QtWidgets.QPushButton()
+        _set_icon(
+            widget=self.set_value_btn,
+            icon_path=os.path.expandvars('$ICONS_PATH/down.svg'),
+            label='▾')
+        layout.addWidget(self.set_value_btn)
+        self.set_value_btn.clicked.connect(self.set_filter)
+
         self.remove_btn = QtWidgets.QPushButton()
         _set_icon(
             widget=self.remove_btn,
@@ -352,15 +361,20 @@ class FilterTag(QtWidgets.QFrame):
             label='x')
         self.remove_btn.clicked.connect(self.on_remove)
         layout.addWidget(self.remove_btn)
-        self.setLayout(layout)
 
+        self.setLayout(layout)
         self.set_label()
 
     def set_label(self):
         label = (
-            f'{self.name}:{self.value}'
+            f'{self.name} › {self.value}'
             if isinstance(self.value, str) else self.name)
         self.filter_btn.setText(label)
+
+    def set_value(self, value):
+        self.value = value
+        self.set_label()
+        self.updated.emit()
 
     def on_remove(self):
         self.removed.emit(self)
@@ -377,6 +391,9 @@ class FilterTag(QtWidgets.QFrame):
                 self.value = value
                 self.set_label()
                 self.updated.emit()
+
+    def set_filter(self):
+        self.values_requested.emit(self)
 
 
 class SetFilterDialog(QtWidgets.QDialog):
@@ -410,6 +427,7 @@ class SetFilterDialog(QtWidgets.QDialog):
 
 class FiltersBar(QtWidgets.QWidget):
     filters_changed = QtCore.Signal(dict, str)
+    show_tag_values = QtCore.Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -443,6 +461,7 @@ class FiltersBar(QtWidgets.QWidget):
         tag = FilterTag(name, value)
         tag.removed.connect(self.remove_filter)
         tag.updated.connect(self.emit_filters)
+        tag.values_requested.connect(self.show_values)
         self.tags.append(tag)
         self.layout().insertWidget(self.layout().count() - 1, tag)
         self.emit_filters()
@@ -452,6 +471,9 @@ class FiltersBar(QtWidgets.QWidget):
         tag.setParent(None)
         tag.deleteLater()
         self.emit_filters()
+
+    def show_values(self, tag: FilterTag):
+        self.show_tag_values.emit(tag)
 
     def add_new_filter(self):
         dlg = SetFilterDialog(self)
@@ -532,6 +554,8 @@ class ThumbnailsWidget(QtWidgets.QWidget):
             self.view.setSpacing, QtCore.Qt.QueuedConnection)
         self.search_controls.filters.filters_changed.connect(
             self.on_filters_changed)
+        self.search_controls.filters.show_tag_values.connect(
+            self.on_show_tag_values)
 
         self.view.view_item.connect(self.on_thumbnail_double_clicked)
         self.view.item_clicked.connect(self.on_thumbnail_clicked)
@@ -598,6 +622,31 @@ class ThumbnailsWidget(QtWidgets.QWidget):
         self.proxy_model.active_filters = filters
         self.proxy_model.filter_mode = mode
         self.proxy_model.invalidateFilter()
+
+    def on_show_tag_values(self, tag: FilterTag):
+        name = tag.name
+        items = _get_items_from_model(self.model)
+        available_values = set()
+        for item in items:
+            if item.tags is None:
+                continue
+            if name not in item.tags:
+                continue
+            tag_values = item.tags[name]
+            tags = tag_values if isinstance(tag_values, list) else [tag_values]
+            for t in tags:
+                available_values.add(t)
+        if available_values:
+            menu = QtWidgets.QMenu(self)
+            for value in available_values:
+                action = QtGui.QAction(str(value), menu)
+                action.setData(value)
+                menu.addAction(action)
+            pos = QtGui.QCursor.pos()
+            action = menu.exec(pos)
+            if action:
+                value = action.data()
+                tag.set_value(value)
 
 
 def _get_items_from_model(model):
