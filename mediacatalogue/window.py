@@ -49,6 +49,8 @@ class CollectionsModel(QtCore.QAbstractItemModel):
         return len(item.children)
 
     def flags(self, index):
+        if not index.isValid():
+            return QtCore.Qt.NoItemFlags
         item = index.internalPointer()
         flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         if getattr(item, 'checkable', False):
@@ -60,7 +62,7 @@ class CollectionsModel(QtCore.QAbstractItemModel):
         match role:
             case QtCore.Qt.CheckStateRole:
                 if getattr(item, 'checkable', False):
-                    return item.checked
+                    return int(item.checked)
             case QtCore.Qt.DisplayRole:
                 return item.display_role()
 
@@ -108,11 +110,53 @@ class CollectionsView(QtWidgets.QTreeView):
         self.setHeaderHidden(True)
         self.setRootIsDecorated(True)  # Dislpay arrows for item with children
 
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.on_context_menu)
+
     def sizeHint(self):  # noqa N802
         return QtCore.QSize(collections_view_minimum_width, 0)
 
     def minimumSizeHint(self):  # noqa N802
         return QtCore.QSize(collections_view_minimum_width, 0)
+
+    def on_context_menu(self):
+        indexes = self.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+
+        menu = QtWidgets.QMenu(self)
+        check_action = menu.addAction('check')
+        uncheck_action = menu.addAction('uncheck')
+
+        action = menu.exec(QtGui.QCursor.pos())
+        if not action:
+            return
+
+        model = self.model()
+
+        if action == check_action:
+            target_state = QtCore.Qt.CheckState.Checked
+        elif action == uncheck_action:
+            target_state = QtCore.Qt.CheckState.Unchecked
+        else:
+            return
+
+        for index in indexes:
+            if not index.isValid():
+                continue
+
+            item = index.internalPointer()
+            if not getattr(item, 'checkable', False):
+                continue
+
+            # Don't change item that match target state
+            if item.checked == target_state:
+                continue
+
+            model.setData(
+                index,
+                int(target_state),
+                QtCore.Qt.CheckStateRole)
 
 
 class CollectionsWidget(QtWidgets.QWidget):
