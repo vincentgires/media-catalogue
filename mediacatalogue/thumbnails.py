@@ -10,6 +10,7 @@ from mediacatalogue.imageviewer import (
 
 default_item_spacing = 5
 default_item_size = (285, 150)
+default_sort_fields = []
 _thread_pool_executor = ThreadPoolExecutor()
 
 
@@ -165,12 +166,16 @@ class ThumbnailItemModel(QtGui.QStandardItemModel):
 
 
 class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
-    def __init__(self, parent=None):
+    sort_role = QtCore.Qt.UserRole + 1
+
+    def __init__(self, parent=None, sort_field: list | None = None):
         super().__init__(parent)
         self.setDynamicSortFilter(True)
         self.setFilterCaseSensitivity(QtCore.Qt.CaseInsensitive)
         self.active_filters: dict[str, list[str | bool]] = {}
         self.filter_mode: Literal['all', 'any'] = 'all'
+        self.sort_fields = sort_field or default_sort_fields
+        self.setSortRole(self.sort_role)
 
     def filterAcceptsRow(self, source_row, source_parent):  # noqa N802
         if not self.active_filters:
@@ -193,6 +198,17 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
                 matches.append(any(x in tag_values for x in filter_values))
 
         return all(matches) if self.filter_mode == 'all' else any(matches)
+
+    def lessThan(self, left_index, right_index):  # noqa N802
+        lv = left_index.data(self.sortRole())
+        rv = right_index.data(self.sortRole())
+        return (lv or ()) < (rv or ())
+
+    def update_item_sort_value(self, item):
+        """Resolve sort value from item.tags using configured sort_fields"""
+        tags = item.tags or {}
+        value = tuple(tags[k] for k in self.sort_fields if k in tags)
+        item.setData(value, self.sort_role)
 
 
 class ThumbnailView(QtWidgets.QListView):
@@ -537,8 +553,10 @@ class ThumbnailsWidget(QtWidgets.QWidget):
 
         self.view = ThumbnailView(self)
         self.model = ThumbnailItemModel(self)
-        self.proxy_model = ThumbnailItemFilterProxyModel(self)
+        self.proxy_model = ThumbnailItemFilterProxyModel(
+            self, sort_field=default_sort_fields)
         self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.sort(0, QtCore.Qt.AscendingOrder)
         self.view.setModel(self.proxy_model)
 
         self.view_controls = ViewControlsWidget(self)
@@ -584,6 +602,7 @@ class ThumbnailsWidget(QtWidgets.QWidget):
         item.setSizeHint(self.view.iconSize())
         self.model.appendRow(item)
         self.item_added.emit(item)
+        self.proxy_model.update_item_sort_value(item)
 
         self._pending_items.append(item)
         if not self._is_loading:
