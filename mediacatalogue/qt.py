@@ -21,3 +21,4 @@ if qt_binding.startswith('PySide'):
 if qt_binding == 'PySide2':
     QtGui.QAction = QtWidgets.QAction
     QtWidgets.QApplication.exec = QtWidgets.QApplication.exec_
+    QtGui.QDrag.exec = QtGui.QDrag.exec_

@@ -211,6 +211,18 @@ class ThumbnailItemFilterProxyModel(QtCore.QSortFilterProxyModel):
         item.setData(value, self.sort_role)
 
 
+def _serialize_tags(tags: list | None = None):
+    tags = tags or []
+    parts = []
+    for key, value in tags.items():
+        if isinstance(value, (list, tuple)):
+            v = ','.join(map(str, value))
+        else:
+            v = str(value)
+        parts.append(f'{key}={v}')
+    return '|'.join(parts)
+
+
 class ThumbnailView(QtWidgets.QListView):
     item_clicked = QtCore.Signal(QtGui.QStandardItem)
     view_item = QtCore.Signal(QtGui.QStandardItem)
@@ -237,6 +249,23 @@ class ThumbnailView(QtWidgets.QListView):
         self.viewport().installEventFilter(self)
 
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+    def startDrag(self, _supported_actions):  # noqa N802
+        index = self.currentIndex()
+        if not index.isValid():
+            return
+        proxy = index.model()
+        source_model = proxy.sourceModel()
+        source_index = proxy.mapToSource(index)
+        item = source_model.itemFromIndex(source_index)
+        serialized_tags = _serialize_tags(item.tags)
+
+        drag = QtGui.QDrag(self)
+        mime = QtCore.QMimeData()
+        mime_text = f'mediacatalogue#{serialized_tags}'
+        mime.setText(mime_text)
+        drag.setMimeData(mime)
+        drag.exec(QtCore.Qt.CopyAction)
 
     def _update_items_sizehint(self):
         model = self.model()
